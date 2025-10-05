@@ -54,7 +54,8 @@ def forecast():
             # --- NEW FINANCING INPUTS ---
             "initial_debt": float(data.get('initial_debt')), 
             "initial_cash": float(data.get('initial_cash')),
-            "interest_rate": float(data.get('interest_rate'))
+            "interest_rate": float(data.get('interest_rate')),
+            "annual_debt_repayment": float(data.get('annual_debt_repayment'))
         }
     except ValueError:
         return jsonify({"error": "Invalid number format received."}), 400
