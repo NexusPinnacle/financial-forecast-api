@@ -1,10 +1,25 @@
 # app.py
 
+# This is the "homepage" that serves your frontend
+@app.route('/')
+def home():
+    # This now looks for index.html in the root directory (where app.py is)
+    return render_template('index.html')
+
 from flask import Flask, request, jsonify
 from forecaster import generate_forecast
 from flask_cors import CORS # Needed to allow your frontend to talk to your backend
 
-app = Flask(__name__)
+app = Flask(__name__
+            
+            ,
+    template_folder='.',    # Look for index.html in the current folder
+    static_folder='.'       # Look for script.js and style.css in the current folder
+
+
+
+            
+)
 # Enable CORS for all routes - IMPORTANT for deployment
 CORS(app) 
 
