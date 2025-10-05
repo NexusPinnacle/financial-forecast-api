@@ -36,7 +36,9 @@ form.addEventListener('submit', async (e) => {
         data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
         data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
         data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-
+        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value); // <-- ADD THIS LINE
+        
+        
         // Percentage inputs
         data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
         data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
@@ -227,7 +229,8 @@ function renderResults(data, currencySymbol) {
 // --- RENDER CASH FLOW STATEMENT (Starts loop at i=1 to skip Year 0) ---
 
     const netChangeInCash = data["Net Change in Cash"]; 
-        
+    const cffResults = data["Cash Flow from Financing"]; // <-- GET NEW CFF DATA
+    
     // Start loop at i=1
     for (let i = 1; i < years; i++) { // i goes 1, 2, 3
         
@@ -241,7 +244,7 @@ function renderResults(data, currencySymbol) {
             { label: "Less: Change in NWC", value: -data["Change in NWC"][i] }, 
             { label: "Cash Flow from Operations", value: cfo, isTotal: true, isBold: true }, 
             { label: "Cash Flow from Investing (CapEx)", value: capExValue, isBold: true }, 
-            { label: "Cash Flow from Financing", value: 0.0, isBold: true }, 
+            { label: "Cash Flow from Financing", value: cffResults[i], isBold: true }, // <-- USE THE BACKEND'S CFF VALUE
             { label: "Net Change in Cash", value: netChangeInCash[i], isTotal: true, isBold: true }
         ];
         
