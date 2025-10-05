@@ -2,7 +2,7 @@
 
 // URL for your Flask API running locally
 // *** REMEMBER TO UPDATE THIS URL WHEN YOU DEPLOY! ***
-const API_URL = 'http://127.0.0.1:5000/api/forecast'; 
+const API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/forecast'; 
 
 const form = document.getElementById('forecastForm');
 const resultsContainer = document.getElementById('results-container');
