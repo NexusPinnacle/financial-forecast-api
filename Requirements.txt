@@ -2,4 +2,3 @@ Flask
 gunicorn
 Flask-CORS
 # Add any other libraries like pandas, numpy, etc. if needed
-pip install --upgrade pip
