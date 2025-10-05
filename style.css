@@ -1,0 +1,138 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #3b84f5; /* A nice blue color */
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Input Form Styling */
+.input-group {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+label {
+    flex-basis: 60%;
+    font-weight: bold;
+}
+
+input[type="number"] {
+    flex-basis: 35%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: right;
+}
+
+button {
+    background-color: #003b5c; /* #28a745 Green for action */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    margin-top: 20px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+/* Table Styling for Results */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    margin-bottom: 30px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: right; /* Financials are usually right-aligned */
+}
+
+/* Original rule replaced/modified: */
+th:first-child {
+    text-align: left;
+    font-weight: bold; /* Keep the 'Line Item' header bold */
+}
+
+td:first-child {
+    text-align: left;
+    font-weight: normal; /* Default all labels to normal (non-bold) */
+}
+
+/* These rules must be present to make the selected lines bold */
+.is-bold-row td, .heavy-total-row td {
+    font-weight: bold;
+}
+
+thead th {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.error-message {
+    color: red;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+/* style.css */
+
+/* ... (Existing styles above) ... */
+
+/* New rule to make bold line items stand out */
+.is-bold-row td {
+    font-weight: bold;
+}
+
+/* style.css */
+
+/* ... (Existing styles above) ... */
+
+/* Rule to ensure the heavy total rows on the Balance Sheet are bold */
+.heavy-total-row td {
+    font-weight: bold;
+}
+
+/* style.css */
+
+/* Add styling for the select dropdown to match number inputs */
+select {
+    /* Match the width of input[type="number"] */
+    flex-basis: 35%;
+    /* Match padding and borders */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    /* Ensure height consistency */
+    text-align: right;
+
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: white; /* Ensure background is white */
+}
