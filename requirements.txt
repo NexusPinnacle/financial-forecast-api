@@ -1,4 +1,6 @@
 Flask
 gunicorn
 Flask-CORS
+pandas
+numpy
 # Add any other libraries like pandas, numpy, etc. if needed
