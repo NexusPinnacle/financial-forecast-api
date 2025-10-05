@@ -5,6 +5,40 @@ from flask import Flask, request, jsonify, render_template  # <-- ADD render_tem
 from forecaster import generate_forecast
 from flask_cors import CORS 
 
+
+
+
+#######test########
+
+
+
+# --- AUTHENTICATION CONFIG ---
+USERNAME = "user"
+PASSWORD = "password"  # <-- CHANGE THIS TO YOUR DESIRED PASSCODE!
+
+def check_auth(username, password):
+    """This function checks if a username/password combination is valid."""
+    return username == USERNAME and password == PASSWORD
+
+def authenticate():
+    """Sends a 401 response that requires username/password."""
+    return Response(
+    'Could not verify your access level for that URL.\n'
+    'You have to login with proper credentials', 401,
+    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+
+
+#######test########
+
+
+
+
+
+
+
+
+
 # 2. Custom App Initialization for Root Directory
 # Tells Flask to look for index.html (template) and script/style (static) in the current folder ('.')
 app = Flask(
@@ -20,6 +54,32 @@ CORS(app)
 # 3. Change the Home Route to Render HTML
 @app.route('/')
 def home():
+
+
+
+
+
+#######test########
+
+auth = request.authorization
+    
+    # Check if the user has provided credentials
+    if not auth or not check_auth(auth.username, auth.password):
+        # If credentials are bad or missing, send the prompt
+        return authenticate()
+        
+    # If credentials are correct, render the HTML page
+
+
+
+#######test########
+
+
+
+
+
+
+    
     # This line tells Flask to load and send your index.html file
     return render_template('index.html')   
 
