@@ -17,7 +17,8 @@ def generate_forecast(
     dpo_days,           
     initial_debt,       
     initial_cash,       
-    interest_rate,      
+    interest_rate,
+    annual_debt_repayment,
     years=3
 ):
     """Calculates the 3-year integrated financial forecast, including Year 0."""
@@ -47,9 +48,15 @@ def generate_forecast(
     # Cash Flow Statement Components
     change_in_nwc = [0.0] * (years + 1)
     net_change_in_cash = [0.0] * (years + 1)
+    cash_flow_from_financing = [0.0] * (years + 1) # <--- NEW CFF LIST
     
     # Fixed Opex List (Needed for JS display)
     fixed_opex_list = [fixed_opex] * (years + 1)
+
+    # Debt Repayment List (Needed for JS display)
+    # Repayment starts in Year 1, Year 0 is 0.0
+    debt_repayment_list = [0.0, annual_debt_repayment, annual_debt_repayment, annual_debt_repayment] 
+    # Use max() to ensure a repayment doesn't push debt below zero if initial_debt is small.
 
 
     # Set Year 0 (Base Case)
@@ -119,7 +126,10 @@ def generate_forecast(
         
         ppe_closing[i] = opening_ppe + capex - depreciation[i]
         
-        debt_closing[i] = initial_debt # Static debt model
+        # --- DEBT & RE CALCULATION ---
+        # The new debt closing balance is the prior year's balance MINUS repayment.
+        # Use max(0, ...) to ensure debt doesn't become negative.
+        debt_closing[i] = max(0, debt_closing[i-1] - annual_debt_repayment) # <--- 2. UPDATED DEBT LOGIC
         
         re_opening = retained_earnings[i-1]
         retained_earnings[i] = re_opening + net_income[i]
@@ -127,7 +137,12 @@ def generate_forecast(
         # --- CASH FLOW STATEMENT (The Link) ---
         cfo = net_income[i] + depreciation[i] - change_in_nwc[i]
         cfi = -capex
-        cff = 0.0
+        
+        # 3. Update CFF: If there is debt repayment, it is a negative cash flow.
+        current_repayment = min(debt_closing[i-1], annual_debt_repayment) # Actual cash flow is the lesser of last year's debt and the repayment amount
+        cff = -current_repayment
+        
+        cash_flow_from_financing[i] = cff # Store for output
         
         net_change_in_cash[i] = cfo + cfi + cff
         cash_closing[i] = cash_closing[i-1] + net_change_in_cash[i]
@@ -157,6 +172,7 @@ def generate_forecast(
         "Closing RE": retained_earnings[0:],
         # CFS Items
         "Change in NWC": change_in_nwc[0:],
+        "Cash Flow from Financing": cash_flow_from_financing[0:], # <--- ADD THIS
         "Net Change in Cash": net_change_in_cash[0:]
     }
     
