@@ -11,9 +11,6 @@ const balanceSheetBody = document.querySelector('#balanceSheetTable tbody');
 const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
 
-let lastForecastResults = null; // <-- ADD THIS LINE
-const exportButton = document.getElementById('exportButton'); // <-- ADD THIS LINE
-
 
 
 form.addEventListener('submit', async (e) => {
@@ -73,13 +70,9 @@ form.addEventListener('submit', async (e) => {
             return;
         }
 
-        // 4. Display the results - PASS THE CURRENCY SYMBOL
-
-        lastForecastResults = forecast_results; // <-- ADD: Store results
-        
+        // 4. Display the results - PASS THE CURRENCY SYMBOL   
         renderResults(result, currencySymbol);
 
-        exportButton.style.display = 'block'; // <-- ADD: Show export button
 
         
     } catch (error) {
@@ -283,74 +276,3 @@ function renderResults(data, currencySymbol) {
     resultsContainer.style.display = 'block';
 
 }
-
-
-// script.js (Add these new functions at the bottom)
-function createCSVString(results) {
-    const years = results.Years; // [0, 1, 2, 3]
-    let csv = '';
-
-    // Helper function to process a single statement
-    const processStatement = (title, keys, includeYear0 = false) => {
-        let statementCsv = `"${title}"\n`;
-        
-        // Define columns based on whether Year 0 is needed
-        const headerYears = includeYear0 ? years : years.slice(1);
-        statementCsv += `Line Item,${headerYears.join(',')}\n`;
-
-        keys.forEach(key => {
-            const data = results[key];
-            // Slice data if Year 0 is not included
-            const dataRow = includeYear0 ? data : data.slice(1);
-            
-            // Format the row as "Line Item,Value1,Value2,..."
-            statementCsv += `"${key}",${dataRow.join(',')}\n`;
-        });
-        
-        return statementCsv + '\n\n';
-    };
-
-    // 1. Income Statement (Years 1-3)
-    const isKeys = ["Revenue", "COGS", "Gross Profit", "Fixed Opex", "Depreciation", "EBIT", "Interest Expense", "EBT", "Taxes", "Net Income"];
-    csv += processStatement("INCOME STATEMENT", isKeys, false);
-
-    // 2. Balance Sheet (Years 0-3)
-    // NOTE: This uses the raw closing balances from the JSON
-    const bsKeys = ["Closing Cash", "Closing AR", "Closing Inventory", "Closing PPE", "Closing Total Assets", 
-                    "Closing AP", "Closing Debt", "Retained Earnings", "Total Liabilities & Equity"];
-    csv += processStatement("BALANCE SHEET", bsKeys, true);
-
-    // 3. Cash Flow Statement (Years 1-3)
-    const cfsKeys = ["Cash Flow from Operations", "Cash Flow from Investing", "Cash Flow from Financing", "Net Change in Cash"];
-    csv += processStatement("CASH FLOW STATEMENT", cfsKeys, false);
-    
-    return csv;
-}
-
-
-function exportToCSV() {
-    if (!lastForecastResults) {
-        alert("Please run the forecast calculation first!");
-        return;
-    }
-
-    const csvContent = createCSVString(lastForecastResults);
-    
-    // Create a temporary link element to trigger the download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    
-    if (link.download !== undefined) { 
-        // Browsers that support HTML5 download attribute
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", "financial_forecast.csv");
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
-
-// Attach the function to the new button
-exportButton.addEventListener('click', exportToCSV);
