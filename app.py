@@ -1,18 +1,29 @@
 # app.py
 
-
-from flask import Flask, request, jsonify
+# 1. Update Imports
+from flask import Flask, request, jsonify, render_template  # <-- ADD render_template
 from forecaster import generate_forecast
-from flask_cors import CORS # Needed to allow your frontend to talk to your backend
+from flask_cors import CORS 
 
-app = Flask(__name__)
-# Enable CORS for all routes - IMPORTANT for deployment
+# 2. Custom App Initialization for Root Directory
+# Tells Flask to look for index.html (template) and script/style (static) in the current folder ('.')
+app = Flask(
+    __name__,
+    template_folder='.',    
+    static_folder='.',      
+    static_url_path='/'     
+)
+
+# Enable CORS for all routes
 CORS(app) 
 
-# This is the "homepage" of your backend (optional, just for testing)
+# 3. Change the Home Route to Render HTML
 @app.route('/')
 def home():
-    return "Financial Forecast API is running!"
+    # This line tells Flask to load and send your index.html file
+    return render_template('index.html')   
+
+
 
 # This is the API endpoint the frontend will talk to
 @app.route('/api/forecast', methods=['POST'])
