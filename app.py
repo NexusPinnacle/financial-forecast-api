@@ -61,14 +61,12 @@ def home():
 
 #######test########
 
-auth = request.authorization
+    auth = request.authorization
     
     # Check if the user has provided credentials
     if not auth or not check_auth(auth.username, auth.password):
         # If credentials are bad or missing, send the prompt
         return authenticate()
-        
-    # If credentials are correct, render the HTML page
 
 
 
