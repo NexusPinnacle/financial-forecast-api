@@ -14,17 +14,16 @@
         <form id="forecastForm">
             <h2>Baseline & Assumptions</h2>
 
-
             
             <div class="input-group">
-    <label for="currency_symbol">Select Currency:</label>
-    <select id="currency_symbol" style="flex-basis: 35%;">
-        <option value="$" selected>USD ($)</option>
-        <option value="€">EUR (€)</option>
-        <option value="£">GBP (£)</option>
-        <option value="¥">JPY (¥)</option>
-    </select>
-</div>
+                <label for="currency_symbol">Select Currency:</label>
+                <select id="currency_symbol" style="flex-basis: 35%;">
+                    <option value="$" selected>USD ($)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="¥">JPY (¥)</option>
+                </select>
+            </div>
 
             
             <div class="input-group">
@@ -154,24 +153,25 @@
                 </thead>
                 <tbody>
                 </tbody>
-            </table>
-            
-        <h2>Forecasted KPIs - Visual Trends</h2>
-        <div style="width: 100%; margin: 20px auto; display: flex; flex-wrap: wrap; justify-content: space-around;">
-            
-                        <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
-                <canvas id="revenueKpiChart"></canvas>
-            </div>
+            </table>
             
-            <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
-                <canvas id="cashDebtChart"></canvas>
-            </div>
-            
-        </div>
-</div>
+            <h2>Forecasted KPIs - Visual Trends</h2>
+            <div style="width: 100%; margin: 20px auto; display: flex; flex-wrap: wrap; justify-content: space-around;">
+                
+                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
+                    <canvas id="revenueKpiChart"></canvas>
+                </div>
+                
+                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
+                    <canvas id="cashDebtChart"></canvas>
+                </div>
+                
+            </div> <!-- Closes the chart flex container -->
+        </div> <!-- Closes the results-container -->
+    </div> <!-- Closes the main container -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="script.js"></script>
-        
+    
 </body>
 </html>
