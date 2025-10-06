@@ -136,3 +136,29 @@ select {
     -moz-appearance: none;
     background-color: white; /* Ensure background is white */
 }
+
+/* style.css */
+
+/* Tooltip Trigger Styling */
+.tooltip-trigger {
+    /* Make it look clickable/informational */
+    cursor: help; 
+    color: #007bff; /* Blue color */
+    font-size: 0.9em;
+    font-weight: normal;
+    
+    /* Ensure it aligns well with the label text */
+    margin-left: 5px;
+}
+
+/* Optional: Subtle hover effect */
+.tooltip-trigger:hover {
+    color: #0056b3;
+}
+
+/* You can also add more advanced styles to the label itself if you want to control the text wrapping */
+label {
+    /* Ensures the label has space for the question mark */
+    display: inline-flex;
+    align-items: center; 
+}
