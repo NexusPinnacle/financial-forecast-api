@@ -13,7 +13,8 @@ const errorMessage = document.getElementById('error-message');
 
 
 // Global variable to hold the chart instance
-let forecastChart = null; 
+let revenueChart = null;
+let cashDebtChart = null;
 
 
 form.addEventListener('submit', async (e) => {
@@ -285,58 +286,128 @@ function renderResults(data, currencySymbol) {
 
 }
 
-// New function to handle Chart.js rendering
+// New function to handle Chart.js rendering (REPLACE THE EXISTING renderCharts FUNCTION)
 function renderCharts(data) {
-    const ctx = document.getElementById('kpiChart').getContext('2d');
-    const years = data["Years"].slice(1); // Use Year 1, 2, 3 for x-axis
+    const years = data["Years"].slice(1).map(y => `Year ${y}`); // Use Year 1, 2, 3 for x-axis
 
-    // If a chart already exists, destroy it before creating a new one
-    if (forecastChart) {
-        forecastChart.destroy();
+    // --- 1. Calculate the required KPI for the line chart (EBIT %) ---
+    const ebitPct = [];
+    // Start at i=1 to skip Year 0
+    for (let i = 1; i < data["EBIT"].length; i++) {
+        // EBIT% = EBIT / Revenue
+        const revenue = data["Revenue"][i];
+        const ebit = data["EBIT"][i];
+        // Calculate percentage, default to 0 if revenue is zero
+        const pct = revenue === 0 ? 0 : ebit / revenue;
+        ebitPct.push(pct * 100); // Convert to percentage
     }
-    
-    forecastChart = new Chart(ctx, {
-        type: 'line', // Line chart is best for time-series data
+
+    // --- CHART 1: REVENUE, NET INCOME (Bars) and EBIT % (Line) ---
+    // NOTE: This assumes you use the new canvas ID: 'revenueKpiChart'
+    const ctx1 = document.getElementById('revenueKpiChart').getContext('2d');
+
+    // Destroy the old instance if it exists
+    if (revenueChart) {
+        revenueChart.destroy();
+    }
+
+    revenueChart = new Chart(ctx1, {
+        type: 'bar',
         data: {
-            labels: years.map(y => `Year ${y}`), // X-axis labels: Year 1, Year 2, ...
+            labels: years,
             datasets: [
                 {
                     label: 'Revenue',
-                    data: data["Revenue"].slice(1), // Exclude Year 0 baseline
-                    borderColor: 'rgb(54, 162, 235)', // Blue
-                    tension: 0.1
+                    data: data["Revenue"].slice(1), 
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue Bar
+                    yAxisID: 'y'
                 },
                 {
                     label: 'Net Income',
-                    data: data["Net Income"].slice(1), 
-                    borderColor: 'rgb(75, 192, 192)', // Green
-                    tension: 0.1
+                    data: data["Net Income"].slice(1), 
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green Bar
+                    yAxisID: 'y'
                 },
                 {
+                    type: 'line', // Mixed type
+                    label: 'EBIT % (Line)',
+                    data: ebitPct, 
+                    borderColor: 'rgb(255, 99, 132)', // Red Line
+                    borderWidth: 3,
+                    fill: false,
+                    yAxisID: 'y1' // Use secondary Y-axis for percentage
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Amount' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false }, // Only draw the grid for the primary axis
+                    title: { display: true, text: 'Percentage (%)' },
+                    min: 0,
+                    // Dynamic max setting for a nice scale
+                    max: Math.max(100, ...ebitPct.filter(val => !isNaN(val))) > 0 ? Math.ceil(Math.max(100, ...ebitPct.filter(val => !isNaN(val))) / 10) * 10 : 100 
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Profitability Trends (Revenue, Net Income, EBIT %)'
+                }
+            }
+        }
+    });
+
+    // --- CHART 2: CASH and DEBT (Bar Chart) ---
+    // NOTE: This assumes you use the new canvas ID: 'cashDebtChart'
+    const ctx2 = document.getElementById('cashDebtChart').getContext('2d');
+
+    // Destroy the old instance if it exists
+    if (cashDebtChart) {
+        cashDebtChart.destroy();
+    }
+
+    cashDebtChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: [
+                {
                     label: 'Closing Cash',
-                    data: data["Closing Cash"].slice(1),
-                    borderColor: 'rgb(255, 99, 132)', // Red
-                    tension: 0.1
+                    data: data["Closing Cash"].slice(1), 
+                    backgroundColor: 'rgba(255, 159, 64, 0.7)' // Orange Bar
                 },
                 {
                     label: 'Closing Debt',
-                    data: data["Closing Debt"].slice(1),
-                    borderColor: 'rgb(255, 159, 64)', // Orange
-                    tension: 0.1
+                    data: data["Closing Debt"].slice(1), 
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)' // Red Bar
                 }
             ]
         },
         options: {
             responsive: true,
             scales: {
-                y: {
-                    beginAtZero: true
-                }
+                x: { stacked: false },
+                y: { stacked: false, beginAtZero: true }
             },
             plugins: {
                 title: {
                     display: true,
-                    text: 'Key Financial Trends (Years 1-3)'
+                    text: 'Liquidity & Capital Structure (Cash vs. Debt)'
                 }
             }
         }
