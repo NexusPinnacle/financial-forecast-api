@@ -154,12 +154,20 @@
                 </thead>
                 <tbody>
                 </tbody>
-            </table>
+            </table>
+            
+        <h2>Forecasted KPIs - Visual Trends</h2>
+        <div style="width: 100%; margin: 20px auto; display: flex; flex-wrap: wrap; justify-content: space-around;">
+            
+                        <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
+                <canvas id="revenueKpiChart"></canvas>
+            </div>
             
-      <h2>Forecasted KPIs - Visual Trends</h2>
-    <div style="width: 80%; margin: 20px auto;">
-        <canvas id="kpiChart"></canvas>
-    </div>
+            <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
+                <canvas id="cashDebtChart"></canvas>
+            </div>
+            
+        </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
