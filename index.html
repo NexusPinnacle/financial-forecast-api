@@ -116,6 +116,7 @@
         </form>
 
         <div id="results-container" style="display: none;">
+            <p id="error-message" class="error-message"></p>
             <h2>Forecasted Income Statement</h2>
             <table id="incomeStatementTable">
                 <thead>
@@ -155,19 +156,14 @@
                 </tbody>
             </table>
             
-        </div>
-
-        
-
-            <div id="results-container" style="display: none;">
-        <h2>Forecasted KPIs - Visual Trends</h2>
-        <div style="width: 80%; margin: 20px auto;">
-            <canvas id="kpiChart"></canvas>
-        </div>
-
-                
+      <h2>Forecasted KPIs - Visual Trends</h2>
+    <div style="width: 80%; margin: 20px auto;">
+        <canvas id="kpiChart"></canvas>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="script.js"></script>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="script.js"></script>
+        
 </body>
 </html>
