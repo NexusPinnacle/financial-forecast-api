@@ -11,29 +11,10 @@ const balanceSheetBody = document.querySelector('#balanceSheetTable tbody');
 const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
 
-// Global variables to hold the chart instances
+
+// Global variable to hold the chart instance
 let revenueChart = null;
 let cashDebtChart = null;
-let currencySymbol = document.getElementById('currency_symbol')?.value || '$';
-
-// Helper function to format numbers as currency, rounded to 2 decimal places
-const format = (value) => {
-    // Check for non-numeric or extremely large values
-    if (typeof value !== 'number' || isNaN(value) || !isFinite(value)) {
-        return value; 
-    }
-    
-    // Use Intl.NumberFormat for currency formatting
-    const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD', // Placeholder, the symbol will be added later
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(Math.round(value * 100) / 100); // Round to 2 decimal places
-    
-    // Replace the default currency symbol with the user-selected one
-    return formatted.replace('$', currencySymbol);
-};
 
 
 form.addEventListener('submit', async (e) => {
@@ -41,8 +22,8 @@ form.addEventListener('submit', async (e) => {
     
     errorMessage.textContent = '';
     const data = {};
-    // Get the selected currency symbol
-    currencySymbol = document.getElementById('currency_symbol')?.value || '$';
+    // Default currency in case the input is not found (safe fallback)
+    let currencySymbol = document.getElementById('currency_symbol')?.value || '$';
 
     try {
         // 1. Gather all inputs and convert values
@@ -57,170 +38,257 @@ form.addEventListener('submit', async (e) => {
         data.dso_days = parseFloat(document.getElementById('dso_days').value);
         data.dio_days = parseFloat(document.getElementById('dio_days').value);
         data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
-        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
         data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value); // <-- ADD THIS LINE
         
-        // Percentage inputs (converted to decimal for backend logic)
+        
+        // Percentage inputs
         data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
         data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
         data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
         data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
         data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+
         
-        // Debt Repayment (this is not currently used in the backend but is a future input)
-        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
-
-
-        // 2. Call the backend API
+        // CRITICAL CHECK: Ensure no field is NaN
+        for (const key in data) {
+            if (isNaN(data[key])) {
+                throw new Error(`Invalid value for ${key}.`);
+            }
+        }
+        
+        // 2. Call the Python Backend API 
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(data),
+            body: JSON.stringify(data)
         });
-
+        
+        // 3. Handle the API Response
+        const result = await response.json();
+        
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to calculate forecast due to a server error.');
+            errorMessage.textContent = `API Error: ${result.error || response.statusText}`;
+            resultsContainer.style.display = 'none';
+            return;
         }
 
-        const result = await response.json();
+        // 4. Display the results - PASS THE CURRENCY SYMBOL   
+        renderResults(result, currencySymbol);
 
-        // 3. Render results
-        renderTables(result);
-        renderCharts(result);
 
+        
     } catch (error) {
-        console.error('Error fetching forecast:', error);
-        errorMessage.textContent = `Error: ${error.message}`;
+        // Consolidated error handling for all try blocks
+        console.error("Client-side error:", error);
+        
+        if (error.message.includes('Invalid value')) {
+            errorMessage.textContent = 'Please enter valid numerical data for all fields.';
+        } else if (error.message.includes('fetch')) {
+             errorMessage.textContent = 'Network error: Could not connect to the backend server. Is your Python app running?';
+        } else {
+             errorMessage.textContent = `An unexpected error occurred: ${error.message}`;
+        }
         resultsContainer.style.display = 'none';
     }
 });
 
 
-function renderTables(data) {
+/**
+ * Takes the JSON data from the backend and renders it into the HTML tables.
+ * @param {object} data - The forecast results from the backend.
+ * @param {string} currencySymbol - The selected currency symbol (e.g., '$', '€', '£').
+ */
+function renderResults(data, currencySymbol) {
     // Clear previous results
     incomeStatementBody.innerHTML = '';
     balanceSheetBody.innerHTML = '';
-    cashFlowBody.innerHTML = '';
+    cashFlowBody.innerHTML = ''; 
+    
+    // Helper function to format numbers using the selected currencySymbol
+    const format = (value) => {
+        const sign = value < 0 ? '-' : '';
+        const absoluteValue = Math.abs(value);
+        
+        // Use the dynamic currencySymbol
+        return sign + currencySymbol + absoluteValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    };
+
+    const years = data.Years.length; // Will be 4 (Year 0 to Year 3)
+    
+    // Read the static CapEx value ONCE before the loop
+    const capExValue = -parseFloat(document.getElementById('capex').value);
+
 
     // --- RENDER INCOME STATEMENT ---
-    const isLineItems = [
-        { label: "Revenue", dataKey: "Revenue", isTotal: false, isBold: false },
-        { label: "COGS", dataKey: "COGS", isTotal: false, isBold: false },
-        { label: "Gross Profit", dataKey: "Gross Profit", isTotal: true, isBold: true },
-        { label: "Fixed Opex", dataKey: "Fixed Opex", isTotal: false, isBold: false },
-        { label: "Depreciation", dataKey: "Depreciation", isTotal: false, isBold: false },
-        { label: "EBIT", dataKey: "EBIT", isTotal: true, isBold: true },
-        { label: "Interest Expense", dataKey: "Interest Expense", isTotal: false, isBold: false },
-        { label: "EBT", dataKey: "EBT", isTotal: true, isBold: true },
-        { label: "Taxes", dataKey: "Taxes", isTotal: false, isBold: false },
-        { label: "Net Income", dataKey: "Net Income", isTotal: true, isBold: true }
+    
+    const isItems = [
+        { label: "Revenue", dataKey: "Revenue", isBold: true },
+        { label: "Cost of Goods Sold", dataKey: "COGS" }, 
+        { label: "Gross Profit", dataKey: "Gross Profit", isBold: true },
+        { label: "Fixed Operating Expenses", dataKey: "Fixed Opex" }, 
+        { label: "Depreciation", dataKey: "Depreciation" },
+        { label: "EBIT", dataKey: "EBIT", isBold: true },
+        { label: "Interest Expense", dataKey: "Interest Expense" },
+        { label: "EBT", dataKey: "EBT", isBold: true }, 
+        { label: "Taxes", dataKey: "Taxes" }, 
+        { label: "Net Income", dataKey: "Net Income", isBold: true }
     ];
 
-    isLineItems.forEach((item, rowIndex) => {
-        const newRow = incomeStatementBody.insertRow(rowIndex);
-        newRow.insertCell().textContent = item.label; // Label cell
-        if (item.isTotal) { newRow.classList.add('total-row'); }
-        if (item.isBold) { newRow.classList.add('is-bold-row'); }
-
-        // Loop through years 1 to 3 (data indices 1, 2, 3)
-        for (let i = 1; i <= 3; i++) {
-            const cell = newRow.insertCell();
-            // Use the data[item.dataKey] array and the current year index i
-            cell.textContent = format(data[item.dataKey][i] || 0.0);
-            if (item.isTotal) { cell.classList.add('total-cell'); }
+    isItems.forEach(item => {
+        const row = incomeStatementBody.insertRow();
+        
+        if (item.isBold) {
+            row.classList.add('is-bold-row');
         }
-    });
-
-    // --- RENDER BALANCE SHEET ---
-    const bsLineItems = [
-        { label: "Closing Cash", dataKey: "Closing Cash" },
-        { label: "Accounts Receivable", dataKey: "Closing AR" },
-        { label: "Inventory", dataKey: "Closing Inventory" },
-        { label: "Net PP&E", dataKey: "Closing PP&E", isBold: true },
-        { label: "Total Assets", dataKey: "Total Assets", isHeavyTotal: true },
-
-        { label: "Accounts Payable", dataKey: "Closing AP" },
-        { label: "Closing Debt", dataKey: "Closing Debt", isBold: true },
-        { label: "Retained Earnings", dataKey: "Retained Earnings", isBold: true },
-        { label: "Total Liabilities & Equity", dataKey: "Total L&E", isHeavyTotal: true }
-    ];
-    
-    bsLineItems.forEach((item, rowIndex) => {
-        const newRow = balanceSheetBody.insertRow(rowIndex);
-        newRow.insertCell().textContent = item.label; // Label cell
         
-        if (item.isBold) { newRow.classList.add('is-bold-row'); }
-        if (item.isHeavyTotal) { newRow.classList.add('heavy-total-row'); }
+        row.insertCell().textContent = item.label;
 
-        // Loop through years 0 to 3 (data indices 0, 1, 2, 3)
-        for (let i = 0; i <= 3; i++) {
-            const cell = newRow.insertCell();
-            cell.textContent = format(data[item.dataKey][i] || 0.0);
-            if (item.isHeavyTotal) { cell.classList.add('total-cell'); }
-        }
-    });
-    
-    // --- RENDER CASH FLOW STATEMENT ---
-    // Note: CF items are calculated for periods 1-3, so they start at index 1
-    // We will use a structure that aligns with the balance sheet, but only displays Years 1, 2, 3
-    
-    // We need to calculate the Change in NWC items and CapEx for display in the table
-    const changeInAR = data["Closing AR"].slice(1).map((val, i) => val - data["Closing AR"][i]);
-    const changeInInventory = data["Closing Inventory"].slice(1).map((val, i) => val - data["Closing Inventory"][i]);
-    const changeInAP = data["Closing AP"].slice(1).map((val, i) => val - data["Closing AP"][i]);
-    
-    // CapEx is constant, but presented as a negative number for Cash Flow from Investing (CFI)
-    const capExValue = data["CapEx"][1]; // CapEx is the same for all years (at index 1)
-
-    // CFS structure and data keys for display
-    const cfsLineItemsTemplate = [
-        { label: "Net Income", data: data["Net Income"].slice(1), isBold: true },
-        { label: "Depreciation & Amortization", data: data["Depreciation"].slice(1), isBold: false },
-        
-        { label: "Change in Accounts Receivable", data: changeInAR.map(val => -val), isBold: false }, // AR Increase = Cash Decrease (-)
-        { label: "Change in Inventory", data: changeInInventory.map(val => -val), isBold: false }, // Inv Increase = Cash Decrease (-)
-        { label: "Change in Accounts Payable", data: changeInAP, isBold: false }, // AP Increase = Cash Increase (+)
-        
-        // CFO is the sum of items above this line: Net Income + D&A - Chg AR - Chg Inv + Chg AP
-        { label: "Cash Flow from Operations", data: data["CFO"].slice(1), isTotal: true, isBold: true }, 
-
-        { label: "Change in PP&E (CapEx)", data: data["CapEx"].slice(1).map(val => -val), isBold: true }, // CFI
-        { label: "Cash Flow from Investing", data: data["CFI"].slice(1), isTotal: true, isBold: true }, 
-
-        { label: "Debt Repayment", data: data["Debt Repayment"].slice(1).map(val => -val), isBold: true },
-        { label: "Cash Flow from Financing", data: data["CFF"].slice(1), isTotal: true, isBold: true }, 
-
-        { label: "Net Change in Cash", data: data["Net Change in Cash"].slice(1), isTotal: true, isBold: true }
-    ];
-
-    // Populate Cash Flow Statement Table
-    cfsLineItemsTemplate.forEach((item, rowIndex) => {
-        const newRow = cashFlowBody.insertRow(rowIndex);
-        newRow.insertCell().textContent = item.label;
-        if (item.isTotal) { newRow.classList.add('total-row'); }
-        if (item.isBold) { newRow.classList.add('is-bold-row'); }
-
-        // Loop through the data for years 1, 2, 3
-        item.data.forEach((value, colIndex) => {
-            const cell = newRow.insertCell();
-            cell.textContent = format(value);
-            if (item.isTotal) { cell.classList.add('total-cell'); }
+        // FIX: Use .slice(1) to skip Year 0
+        data[item.dataKey].slice(1).forEach(value => {
+            // Updated to use the format function which includes the currencySymbol
+            row.insertCell().textContent = format(value); 
         });
     });
 
+    // --- RENDER BALANCE SHEET (Processes ALL 4 years, i=0 to i=3) ---
+
+    const nwc = [];
+    const capitalEmployed = [];
+    const totalAssets = [];
+    const totalLiabilitiesAndEquity = [];
+    
+    // 1. Calculate the new total metrics for ALL years (i=0 to 3)
+    for (let i = 0; i < years; i++) { 
+        // NWC = AR + Inventory - AP
+        const currentNWC = (data["Closing AR"][i] + data["Closing Inventory"][i]) - data["Closing AP"][i];
+        nwc.push(currentNWC);
+        
+        // Capital Employed = NWC + Net PP&E
+        const currentCE = currentNWC + data["Closing PP&E"][i];
+        capitalEmployed.push(currentCE);
+
+        // TOTAL ASSETS = Cash + AR + Inventory + PP&E
+        const currentAssets = data["Closing Cash"][i] + data["Closing AR"][i] + data["Closing Inventory"][i] + data["Closing PP&E"][i];
+        totalAssets.push(currentAssets);
+        
+        // TOTAL LIABILITIES & EQUITY = AP + Debt + RE
+        const currentL_E = data["Closing AP"][i] + data["Closing Debt"][i] + data["Closing RE"][i];
+        totalLiabilitiesAndEquity.push(currentL_E);
+    }
+
+    // 2. Define the Balance Sheet items
+    const bsItems = [
+        // --- Current Operating Assets ---
+        { label: "Cash", dataKey: "Closing Cash" }, 
+        { label: "Accounts Receivable", dataKey: "Closing AR" }, 
+        { label: "Inventory", dataKey: "Closing Inventory" }, 
+
+        // --- Non-Current Assets ---
+        { label: "Net PP&E", dataKey: "Closing PP&E" },
+        
+        // --- Total Assets Line ---
+        { label: "TOTAL ASSETS", dataKey: "Total Assets", values: totalAssets, isTotal: true, isHeavyTotal: true }, 
+        
+        // --- Liabilities & Equity ---
+        { label: "Accounts Payable", dataKey: "Closing AP" }, 
+        { label: "Debt", dataKey: "Closing Debt" }, 
+        { label: "Retained Earnings", dataKey: "Closing RE" },
+
+        // --- Final Subtotal: Liabilities & Equity ---
+        { label: "TOTAL LIABILITIES & EQUITY", dataKey: "Total L&E", values: totalLiabilitiesAndEquity, isTotal: true, isHeavyTotal: true },
+
+        // --- Subtotal: Net Working Capital ---
+        { label: "Net Working Capital (NWC)", dataKey: "NWC", values: nwc, isTotal: true },
+        { label: "Capital Employed", dataKey: "CapitalEmployed", values: capitalEmployed, isTotal: true }
+    ];
+
+    // 3. Render the table
+    bsItems.forEach(item => {
+        const row = balanceSheetBody.insertRow();
+        row.insertCell().textContent = item.label;
+
+        // Determine which list to use: 'values' for calculated items, 'dataKey' for API data
+        const listToRender = item.values || data[item.dataKey];
+        
+        // NO .slice(1) HERE
+        listToRender.forEach(value => {
+            const cell = row.insertCell();
+            // Updated to use the format function which includes the currencySymbol
+            cell.textContent = format(value);
+            
+            if (item.isTotal) { 
+                cell.classList.add('total-cell'); 
+                row.classList.add('total-row');
+            }
+            if (item.isHeavyTotal) {
+                row.classList.add('heavy-total-row');
+            }
+        });
+    });
+    
+// --- RENDER CASH FLOW STATEMENT (Starts loop at i=1 to skip Year 0) ---
+
+    const netChangeInCash = data["Net Change in Cash"]; 
+    const cffResults = data["Cash Flow from Financing"]; // <-- GET NEW CFF DATA
+    
+    // Start loop at i=1
+    for (let i = 1; i < years; i++) { // i goes 1, 2, 3
+        
+        // Calculate the core components for the CFS display for the current year
+        const cfo = data["Net Income"][i] + data["Depreciation"][i] - data["Change in NWC"][i];
+        
+        // Create the Cash Flow items with calculated values for YEAR i
+        const cfsLineItems = [
+            { label: "Net Income", value: data["Net Income"][i] },
+            { label: "Add: Depreciation", value: data["Depreciation"][i] },
+            { label: "Less: Change in NWC", value: -data["Change in NWC"][i] }, 
+            { label: "Cash Flow from Operations", value: cfo, isTotal: true, isBold: true }, 
+            { label: "Cash Flow from Investing (CapEx)", value: capExValue, isBold: true }, 
+            { label: "Cash Flow from Financing", value: cffResults[i], isBold: true }, // <-- USE THE BACKEND'S CFF VALUE
+            { label: "Net Change in Cash", value: netChangeInCash[i], isTotal: true, isBold: true }
+        ];
+        
+        // Ensure the table has rows for all line items across all years
+        cfsLineItems.forEach((item, rowIndex) => {
+            // Only insert the line item row once when i is 1
+            if (i === 1) { 
+                const newRow = cashFlowBody.insertRow(rowIndex);
+                newRow.insertCell().textContent = item.label;
+                if (item.isTotal) { newRow.classList.add('total-row'); }
+                
+                // Apply the bold class
+                if (item.isBold) {
+                    newRow.classList.add('is-bold-row');
+                }
+            }
+            
+            // Get the row created in the step above
+            const yearRow = cashFlowBody.rows[rowIndex];
+            
+            // Insert the cell into column 'i'. (i=1 is the first data column after the label)
+            if (yearRow) {
+                const newCell = yearRow.insertCell(i); 
+                // Updated to use the format function which includes the currencySymbol
+                newCell.textContent = format(item.value);
+                if (item.isTotal) { newCell.classList.add('total-cell'); }
+            }
+        });
+    }
+    // *** CRITICAL ADDITION: CALL THE CHART FUNCTION HERE ***
+    renderCharts(data);
     
     // Show the results section
     resultsContainer.style.display = 'block';
+
 }
 
-
-// --- NEW CHARTING LOGIC ---
+// New function to handle Chart.js rendering (REPLACE THE EXISTING renderCharts FUNCTION)
 function renderCharts(data) {
-    // Labels for Years 1, 2, 3
-    const years = data["Years"].slice(1).map(y => `Year ${y}`); 
+    const years = data["Years"].slice(1).map(y => `Year ${y}`); // Use Year 1, 2, 3 for x-axis
 
     // --- 1. Calculate the required KPI for the line chart (EBIT %) ---
     const ebitPct = [];
@@ -235,6 +303,7 @@ function renderCharts(data) {
     }
 
     // --- CHART 1: REVENUE, NET INCOME (Bars) and EBIT % (Line) ---
+    // NOTE: This assumes you use the new canvas ID: 'revenueKpiChart'
     const ctx1 = document.getElementById('revenueKpiChart').getContext('2d');
 
     // Destroy the old instance if it exists
@@ -248,20 +317,20 @@ function renderCharts(data) {
             labels: years,
             datasets: [
                 {
-                    label: `Revenue (${currencySymbol})`,
+                    label: 'Revenue',
                     data: data["Revenue"].slice(1), 
                     backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue Bar
                     yAxisID: 'y'
                 },
                 {
-                    label: `Net Income (${currencySymbol})`,
+                    label: 'Net Income',
                     data: data["Net Income"].slice(1), 
                     backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green Bar
                     yAxisID: 'y'
                 },
                 {
                     type: 'line', // Mixed type
-                    label: 'EBIT %',
+                    label: 'EBIT % (Line)',
                     data: ebitPct, 
                     borderColor: 'rgb(255, 99, 132)', // Red Line
                     borderWidth: 3,
@@ -272,7 +341,6 @@ function renderCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -282,7 +350,7 @@ function renderCharts(data) {
                     type: 'linear',
                     display: true,
                     position: 'left',
-                    title: { display: true, text: `Amount (${currencySymbol})` }
+                    title: { display: true, text: 'Amount' }
                 },
                 y1: {
                     type: 'linear',
@@ -299,33 +367,13 @@ function renderCharts(data) {
                 title: {
                     display: true,
                     text: 'Profitability Trends (Revenue, Net Income, EBIT %)'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                if (context.dataset.yAxisID === 'y1') {
-                                    // Format percentage with '%'
-                                    label += context.parsed.y.toFixed(2) + '%';
-                                } else {
-                                    // Format currency
-                                    label += format(context.parsed.y);
-                                }
-                            }
-                            return label;
-                        }
-                    }
                 }
             }
         }
     });
 
     // --- CHART 2: CASH and DEBT (Bar Chart) ---
+    // NOTE: This assumes you use the new canvas ID: 'cashDebtChart'
     const ctx2 = document.getElementById('cashDebtChart').getContext('2d');
 
     // Destroy the old instance if it exists
@@ -339,12 +387,12 @@ function renderCharts(data) {
             labels: years,
             datasets: [
                 {
-                    label: `Closing Cash (${currencySymbol})`,
+                    label: 'Closing Cash',
                     data: data["Closing Cash"].slice(1), 
                     backgroundColor: 'rgba(255, 159, 64, 0.7)' // Orange Bar
                 },
                 {
-                    label: `Closing Debt (${currencySymbol})`,
+                    label: 'Closing Debt',
                     data: data["Closing Debt"].slice(1), 
                     backgroundColor: 'rgba(255, 99, 132, 0.7)' // Red Bar
                 }
@@ -352,33 +400,14 @@ function renderCharts(data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             scales: {
                 x: { stacked: false },
-                y: { 
-                    stacked: false, 
-                    beginAtZero: true,
-                    title: { display: true, text: `Amount (${currencySymbol})` }
-                }
+                y: { stacked: false, beginAtZero: true }
             },
             plugins: {
                 title: {
                     display: true,
                     text: 'Liquidity & Capital Structure (Cash vs. Debt)'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += format(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
                 }
             }
         }
