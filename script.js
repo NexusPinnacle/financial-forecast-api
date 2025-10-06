@@ -277,6 +277,8 @@ function renderResults(data, currencySymbol) {
             }
         });
     }
+    // *** CRITICAL ADDITION: CALL THE CHART FUNCTION HERE ***
+    renderCharts(data);
     
     // Show the results section
     resultsContainer.style.display = 'block';
