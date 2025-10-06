@@ -12,6 +12,9 @@ const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
 
 
+// Global variable to hold the chart instance
+let forecastChart = null; 
+
 
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -278,4 +281,62 @@ function renderResults(data, currencySymbol) {
     // Show the results section
     resultsContainer.style.display = 'block';
 
+}
+
+// New function to handle Chart.js rendering
+function renderCharts(data) {
+    const ctx = document.getElementById('kpiChart').getContext('2d');
+    const years = data["Years"].slice(1); // Use Year 1, 2, 3 for x-axis
+
+    // If a chart already exists, destroy it before creating a new one
+    if (forecastChart) {
+        forecastChart.destroy();
+    }
+    
+    forecastChart = new Chart(ctx, {
+        type: 'line', // Line chart is best for time-series data
+        data: {
+            labels: years.map(y => `Year ${y}`), // X-axis labels: Year 1, Year 2, ...
+            datasets: [
+                {
+                    label: 'Revenue',
+                    data: data["Revenue"].slice(1), // Exclude Year 0 baseline
+                    borderColor: 'rgb(54, 162, 235)', // Blue
+                    tension: 0.1
+                },
+                {
+                    label: 'Net Income',
+                    data: data["Net Income"].slice(1), 
+                    borderColor: 'rgb(75, 192, 192)', // Green
+                    tension: 0.1
+                },
+                {
+                    label: 'Closing Cash',
+                    data: data["Closing Cash"].slice(1),
+                    borderColor: 'rgb(255, 99, 132)', // Red
+                    tension: 0.1
+                },
+                {
+                    label: 'Closing Debt',
+                    data: data["Closing Debt"].slice(1),
+                    borderColor: 'rgb(255, 159, 64)', // Orange
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Key Financial Trends (Years 1-3)'
+                }
+            }
+        }
+    });
 }
