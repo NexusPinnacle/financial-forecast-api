@@ -437,6 +437,7 @@ exportBtn.addEventListener('click', async () => {
         data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
         data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
         data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
         data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
         data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
         data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
