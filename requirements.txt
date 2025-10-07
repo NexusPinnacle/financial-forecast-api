@@ -3,4 +3,5 @@ gunicorn
 Flask-CORS
 pandas
 numpy
+openpyxl
 # Add any other libraries like pandas, numpy, etc. if needed
