@@ -413,3 +413,74 @@ function renderCharts(data) {
         }
     });
 }
+// --- NEW EXPORT FUNCTIONALITY ---
+
+// The API URL for the new export endpoint
+const EXPORT_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/export'; 
+
+const exportBtn = document.getElementById('exportBtn');
+
+exportBtn.addEventListener('click', async () => {
+    // Show user feedback that the download is starting
+    exportBtn.textContent = 'Generating...';
+    exportBtn.disabled = true;
+
+    // 1. Gather the same input data again from the form
+    const data = {};
+    try {
+        data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
+        data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
+        data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
+        data.capex = parseFloat(document.getElementById('capex').value);
+        data.dso_days = parseFloat(document.getElementById('dso_days').value);
+        data.dio_days = parseFloat(document.getElementById('dio_days').value);
+        data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
+        data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+        data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
+        data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
+        data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
+        data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
+        data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+
+        for (const key in data) {
+            if (isNaN(data[key])) throw new Error(`Invalid value for ${key}.`);
+        }
+
+        // 2. Call the NEW export endpoint
+        const response = await fetch(EXPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        // 3. Handle the file response and trigger browser download
+        const blob = await response.blob(); // Get the file data as a "Binary Large Object"
+        const url = window.URL.createObjectURL(blob); // Create a temporary URL for the blob
+        
+        const a = document.createElement('a'); // Create a temporary link element
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'financial_forecast.xlsx'; // The default filename for the download
+        document.body.appendChild(a);
+        
+        a.click(); // Programmatically click the link to trigger the download
+        
+        // 4. Clean up the temporary objects
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error("Export error:", error);
+        // Use your existing error message paragraph to show feedback
+        document.getElementById('error-message').textContent = `Could not export file. ${error.message}`;
+    } finally {
+        // Always reset the button text and state
+        exportBtn.textContent = 'Export to Excel';
+        exportBtn.disabled = false;
+    }
+});
