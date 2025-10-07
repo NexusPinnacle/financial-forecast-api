@@ -37,6 +37,7 @@ def forecast():
             "dpo_days": float(data.get('dpo_days')), 
             "initial_debt": float(data.get('initial_debt')), 
             "initial_cash": float(data.get('initial_cash')),
+            "annual_debt_repayment": float(data.get('annual_debt_repayment')),
             "interest_rate": float(data.get('interest_rate'))
         }
     except ValueError:
@@ -67,6 +68,7 @@ def export_forecast():
             "dpo_days": float(data.get('dpo_days')),
             "initial_debt": float(data.get('initial_debt')),
             "initial_cash": float(data.get('initial_cash')),
+            "annual_debt_repayment": float(data.get('annual_debt_repayment')),
             "interest_rate": float(data.get('interest_rate'))
         }
     except (ValueError, TypeError):
