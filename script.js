@@ -321,14 +321,16 @@ function renderResults(data, currencySymbol) {
         let rowData = [];
         let yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
         
-        if (config.dataKey) {
-            rowData = data[config.dataKey];
-        } else if (config.calculation) {
-            // Data is calculated client-side
-            rowData = config.calculation(data);
-        } else {
-            rowData = [];
-        }
+if (config.dataKey) {
+    // CRITICAL FIX: Use the OR operator (||) to default to an empty array if the key is undefined.
+    rowData = data[config.dataKey] || [];
+} else if (config.calculation) {
+    // Data is calculated client-side
+    rowData = config.calculation(data);
+} else {
+    // Fallback for missing dataKey/calculation 
+    rowData = [];
+}
 
         // Slice the data array starting from the specified index (startIdx)
         const slicedData = rowData.slice(config.startIdx);
