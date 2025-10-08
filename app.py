@@ -1,7 +1,11 @@
 # app.py
 
 # 1. Update Imports
-from flask import Flask, request, jsonify, render_template  # <-- ADD render_template
+from flask import Flask, request, jsonify, render_template, send_file 
+# ALSO ADD THESE:
+import pandas as pd 
+from io import BytesIO 
+
 from forecaster import generate_forecast
 from flask_cors import CORS 
 
