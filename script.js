@@ -243,7 +243,7 @@ function renderResults(data, currencySymbol) {
     incomeStatementBody.innerHTML = '';
     balanceSheetBody.innerHTML = '';
     cashFlowBody.innerHTML = ''; 
-    
+
     // Helper function to format numbers using the selected currencySymbol
     const format = (value) => {
         const sign = value < 0 ? '-' : '';
@@ -253,8 +253,7 @@ function renderResults(data, currencySymbol) {
         return sign + currencySymbol + absoluteValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     };
 
-    const years = data["Years"].slice(1); // [1, 2, 3] or [1, 2, 3, 4, 5], etc.
-        // The full range of years (e.g., [0, 1, 2, 3] or [0, 1, 2, 3, 4, 5])
+    // The full range of years (e.g., [0, 1, 2, 3] or [0, 1, 2, 3, 4, 5])
     const allYears = data["Years"]; 
     
     // Years for Income Statement (IS) and Cash Flow Statement (CFS): [1, 2, 3...]
@@ -264,13 +263,13 @@ function renderResults(data, currencySymbol) {
     const bs_years = allYears; 
 
 // ----------------------------------------------------
-    // FIX A: DYNAMICALLY CREATE TABLE HEADERS
-    // ----------------------------------------------------
+    // DYNAMICALLY CREATE TABLE HEADERS (Correct as is)
+// ----------------------------------------------------
     
     const tableConfigs = [
         { id: 'incomeStatementTable', years: is_cfs_years, body: incomeStatementBody },
-        { id: 'balanceSheetTable', years: bs_years, body: balanceSheetBody }, // Use bs_years for BS
-        { id: 'cashFlowTable', years: is_cfs_years, body: cashFlowBody } // Use is_cfs_years for CFS
+        { id: 'balanceSheetTable', years: bs_years, body: balanceSheetBody }, 
+        { id: 'cashFlowTable', years: is_cfs_years, body: cashFlowBody } 
     ];
 
     tableConfigs.forEach(config => {
@@ -287,9 +286,8 @@ function renderResults(data, currencySymbol) {
         headerRow.appendChild(headerCell);
 
         // 3. Add year headers dynamically
-        config.years.forEach(year => { // Use the correct year list (is_cfs_years or bs_years)
+        config.years.forEach(year => { 
             const yearCell = document.createElement('th');
-            // FIX: If the table is BS and the year is 0, label it 'Year 0 (Initial)'
             if (config.id === 'balanceSheetTable' && year === 0) {
                 yearCell.textContent = 'Year 0 (Initial)';
             } else {
@@ -299,11 +297,8 @@ function renderResults(data, currencySymbol) {
         });
         
     });
-    
-    // Read the static CapEx value ONCE before the loop
-    const capExValue = -parseFloat(document.getElementById('capex').value);
 
-// --- RENDER DATA ROWS: CRITICAL MISSING HELPER FUNCTION ---
+// --- RENDER DATA ROWS: CRITICAL MISSING HELPER FUNCTION (Correct as is) ---
     /**
      * Inserts a single row of data into the specified table body.
      * @param {object} config - Configuration object for the row.
@@ -311,44 +306,30 @@ function renderResults(data, currencySymbol) {
     const insertDataRow = (config) => {
         const row = config.tableBody.insertRow();
 
-        // Apply custom class if provided
         if (config.customClass) {
             row.className = config.customClass;
         }
         
-        // Apply bold style if requested
         if (config.isBold) {
             row.style.fontWeight = 'bold';
         }
 
-        // 1. Line Item Cell
         const labelCell = row.insertCell();
         labelCell.textContent = config.label;
         labelCell.classList.add('line-item-cell');
 
         let rowData = [];
-        let yearsToRender = [];
-
-        // Determine which years to render based on the table
-        if (config.tableBody === balanceSheetBody) {
-            yearsToRender = bs_years;
-        } else {
-            yearsToRender = is_cfs_years;
-        }
+        let yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
         
-        // 2. Determine Data Source
         if (config.dataKey) {
-            // Data comes directly from the backend result
             rowData = data[config.dataKey];
         } else if (config.calculation) {
             // Data is calculated client-side
             rowData = config.calculation(data);
         } else {
-            // Fallback for missing dataKey/calculation (should not happen for finance rows)
             rowData = [];
         }
 
-        // 3. Populate Value Cells
         // Slice the data array starting from the specified index (startIdx)
         const slicedData = rowData.slice(config.startIdx);
         
@@ -357,23 +338,19 @@ function renderResults(data, currencySymbol) {
             const value = slicedData[index];
             const cell = row.insertCell();
             
-            // Check if value is a valid number before formatting
             if (typeof value === 'number' && !isNaN(value)) {
-                // Apply the 'isReversed' logic for items like Change in NWC
                 const finalValue = config.isReversed ? -value : value;
                 cell.textContent = format(finalValue);
             } else {
-                cell.textContent = '-'; // Display a dash for missing/invalid data
+                cell.textContent = '-'; 
             }
             cell.classList.add('data-cell');
         });
     };
-
-
     
-    // --- RENDER INCOME STATEMENT ---
+    // --- RENDER INCOME STATEMENT / BALANCE SHEET / CASH FLOW ---
     
- const forecastData = [
+    const forecastData = [
         // Income Statement (PL) - Data starts from index 1 (Year 1)
         { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
         { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
@@ -386,15 +363,12 @@ function renderResults(data, currencySymbol) {
         { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
 
-
         // Balance Sheet (BS) - Data starts from index 0 (Year 0)
-        // FIX: Ensure startIdx is 0 for all Balance Sheet items
         { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Net PP&E", dataKey: "Closing PP&E", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Total Assets", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
-          // FIX: The calculation must include Year 0 data
           calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), 
           startIdx: 0 
         },
@@ -402,37 +376,43 @@ function renderResults(data, currencySymbol) {
         { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Total Liabilities & Equity", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
-          // FIX: The calculation must include Year 0 data
           calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), 
           startIdx: 0 
         },
 
-
         // Cash Flow Statement (CFS) - Data starts from index 1 (Year 1)
-        // FIX: Ensure startIdx is 1 for all Cash Flow Statement items
         { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
+        
+        // *** FIX 1: Correct indexing for CFO calculation ***
         { label: "Cash Flow from Operations", dataKey: "CFO", tableBody: cashFlowBody, isBold: true, 
-          // FIX: Use the Net Income + Depreciation - Change in NWC calculation, sliced from [1:]
-          calculation: (d) => d["Net Income"].map((val, i) => val + d["Depreciation"][i] - d["Change in NWC"][i]), 
-          startIdx: 1
+          calculation: (d) => {
+              const start = 1;
+              const netIncome = d["Net Income"].slice(start);
+              const depreciation = d["Depreciation"].slice(start);
+              const nwc = d["Change in NWC"].slice(start);
+              return netIncome.map((val, i) => val + depreciation[i] - nwc[i]); 
+          },
+          startIdx: 0 // Array is already sliced and calculated correctly
         },
+        
+        // *** FIX 2: Correct indexing for CapEx calculation ***
         { label: "Cash Flow from Investing (CapEx)", dataKey: "CapEx", tableBody: cashFlowBody, 
-            // FIX: CapEx is not in data keys, assume a fixed negative CapEx value is calculated internally
-            calculation: (d) => { /* Requires CapEx value from inputs or forecaster, assuming it's calculated in forecaster, but you didn't include it in final results for CFS */ return data["Revenue"].slice(1).map(val => -parseFloat(document.getElementById('capex').value)); },
-            startIdx: 1
+          calculation: (d) => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)),
+          startIdx: 0 // Array is already correctly sized
         },
+        
         { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
         
     ];
 
-    // **This is the line that was missing a definition or was commented out:**
+    // This is the line that makes the table rendering work!
     forecastData.forEach(insertDataRow); 
     
-    // *** CRITICAL ADDITION: CALL THE CHART FUNCTION HERE ***
-    renderCharts(data);
+    // Call the chart function
+    renderCharts(data);
     
     // Show the results section
     resultsContainer.style.display = 'block';
