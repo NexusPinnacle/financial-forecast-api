@@ -148,9 +148,55 @@ def generate_forecast(
         cash_closing[i] = cash_closing[i-1] + net_change_in_cash[i]
 
 
-    # 3. Format Output: Slice all lists to INCLUDE Year 0 ([0:])
+    # 3. Format Output: Slice all lists
+    # Create the structure for IS, BS, and CFS lists (Years 1-3 for IS/CFS, Years 0-3 for BS)
+    
+    # --- Income Statement Structure (Years 1, 2, 3) ---
+    is_data = {
+        "Revenue": revenue[1:],
+        "COGS": cogs[1:],
+        "Gross Profit": gross_profit[1:],
+        "Fixed Operating Expenses": fixed_opex_list[1:],
+        "Depreciation": depreciation[1:],
+        "EBIT": ebit[1:],
+        "Interest Expense": interest_expense[1:],
+        "EBT": ebt[1:],
+        "Taxes": taxes[1:],
+        "Net Income": net_income[1:],
+    }
+
+    # --- Balance Sheet Structure (Years 0, 1, 2, 3) ---
+    # Includes Year 0 for comparison
+    bs_data = {
+        "Cash": cash_closing[0:],
+        "Accounts Receivable": ar_closing[0:],
+        "Inventory": inventory_closing[0:],
+        "Net PP&E": ppe_closing[0:],
+        "Accounts Payable": ap_closing[0:],
+        "Debt": debt_closing[0:],
+        "Retained Earnings": retained_earnings[0:],
+    }
+
+    # --- Cash Flow Statement Components (Years 1, 2, 3) ---
+    # Invert NWC change for CFS presentation
+    change_in_nwc_cfs = [-x for x in change_in_nwc[1:]] 
+    
+    cfs_data = {
+        "Net Income": net_income[1:],
+        "Add: Depreciation": depreciation[1:],
+        "Less: Change in NWC": change_in_nwc_cfs, 
+        "Cash Flow from Operations": [
+            net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, years + 1)
+        ],
+        "Cash Flow from Investing (CapEx)": [-capex] * years, # CapEx is a fixed outflow (already negative in list for this purpose)
+        "Cash Flow from Financing": cash_flow_from_financing[1:],
+        "Net Change in Cash": net_change_in_cash[1:],
+    }
+    
+    # --- Final Result Dictionary for JSON/API Output ---
+    # Preserve the existing structure for the main front-end tables/charts
     results = {
-        "Years": list(range(years + 1)), # [0, 1, 2, 3]
+        "Years": list(range(years + 1)),
         # IS Items
         "Revenue": revenue[0:],
         "COGS": cogs[0:],
@@ -172,8 +218,13 @@ def generate_forecast(
         "Closing RE": retained_earnings[0:],
         # CFS Items
         "Change in NWC": change_in_nwc[0:],
-        "Cash Flow from Financing": cash_flow_from_financing[0:], # <--- ADD THIS
-        "Net Change in Cash": net_change_in_cash[0:]
+        "Cash Flow from Financing": cash_flow_from_financing[0:],
+        "Net Change in Cash": net_change_in_cash[0:],
+        
+        # --- NEW EXCEL DATA STRUCTURES (Used by the /api/export route) ---
+        "excel_is": is_data,
+        "excel_bs": bs_data,
+        "excel_cfs": cfs_data,
     }
-    
+
     return results
