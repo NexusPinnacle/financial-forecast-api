@@ -303,7 +303,74 @@ function renderResults(data, currencySymbol) {
     // Read the static CapEx value ONCE before the loop
     const capExValue = -parseFloat(document.getElementById('capex').value);
 
+// --- RENDER DATA ROWS: CRITICAL MISSING HELPER FUNCTION ---
+    /**
+     * Inserts a single row of data into the specified table body.
+     * @param {object} config - Configuration object for the row.
+     */
+    const insertDataRow = (config) => {
+        const row = config.tableBody.insertRow();
 
+        // Apply custom class if provided
+        if (config.customClass) {
+            row.className = config.customClass;
+        }
+        
+        // Apply bold style if requested
+        if (config.isBold) {
+            row.style.fontWeight = 'bold';
+        }
+
+        // 1. Line Item Cell
+        const labelCell = row.insertCell();
+        labelCell.textContent = config.label;
+        labelCell.classList.add('line-item-cell');
+
+        let rowData = [];
+        let yearsToRender = [];
+
+        // Determine which years to render based on the table
+        if (config.tableBody === balanceSheetBody) {
+            yearsToRender = bs_years;
+        } else {
+            yearsToRender = is_cfs_years;
+        }
+        
+        // 2. Determine Data Source
+        if (config.dataKey) {
+            // Data comes directly from the backend result
+            rowData = data[config.dataKey];
+        } else if (config.calculation) {
+            // Data is calculated client-side
+            rowData = config.calculation(data);
+        } else {
+            // Fallback for missing dataKey/calculation (should not happen for finance rows)
+            rowData = [];
+        }
+
+        // 3. Populate Value Cells
+        // Slice the data array starting from the specified index (startIdx)
+        const slicedData = rowData.slice(config.startIdx);
+        
+        // Ensure we iterate exactly for the number of columns (years) expected for the table
+        yearsToRender.forEach((year, index) => {
+            const value = slicedData[index];
+            const cell = row.insertCell();
+            
+            // Check if value is a valid number before formatting
+            if (typeof value === 'number' && !isNaN(value)) {
+                // Apply the 'isReversed' logic for items like Change in NWC
+                const finalValue = config.isReversed ? -value : value;
+                cell.textContent = format(finalValue);
+            } else {
+                cell.textContent = '-'; // Display a dash for missing/invalid data
+            }
+            cell.classList.add('data-cell');
+        });
+    };
+
+
+    
     // --- RENDER INCOME STATEMENT ---
     
  const forecastData = [
@@ -361,13 +428,8 @@ function renderResults(data, currencySymbol) {
         
     ];
 
-      // Helper function to insert a row and its cells
-const insertDataRow = (config) => {
-    // ... (your helper function code)
-};
-
-// --- RENDER ALL TABLES using the configuration array ---
-forecastData.forEach(insertDataRow); // <--- ADD THIS LINE HERE to run the rendering
+    // **This is the line that was missing a definition or was commented out:**
+    forecastData.forEach(insertDataRow); 
     
     // *** CRITICAL ADDITION: CALL THE CHART FUNCTION HERE ***
     renderCharts(data);
