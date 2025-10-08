@@ -119,7 +119,7 @@ def export_forecast():
         
         # --- Income Statement Sheet ---
         df_is = pd.DataFrame(forecast_results['excel_is'])
-        df_is.index = ['Year 1', 'Year 2', 'Year 3']
+        df_is.index = is_cfs_years # WAS: ['Year 1', 'Year 2', 'Year 3']
         df_is = df_is.T # Transpose for line items as rows
         df_is.to_excel(writer, sheet_name='Income Statement', startrow=1, header=True, 
             index_label='Line Item',
@@ -127,7 +127,7 @@ def export_forecast():
         
         # --- Balance Sheet Sheet ---
         df_bs = pd.DataFrame(forecast_results['excel_bs'])
-        df_bs.index = ['Year 0', 'Year 1', 'Year 2', 'Year 3']
+        df_bs.index = bs_years # WAS: ['Year 0', 'Year 1', 'Year 2', 'Year 3']
         df_bs = df_bs.T # Transpose for line items as rows
         df_bs.to_excel(writer, sheet_name='Balance Sheet', startrow=1, header=True, 
             index_label='Line Item',
@@ -135,7 +135,7 @@ def export_forecast():
         
         # --- Cash Flow Statement Sheet ---
         df_cfs = pd.DataFrame(forecast_results['excel_cfs'])
-        df_cfs.index = ['Year 1', 'Year 2', 'Year 3']
+        df_cfs.index = is_cfs_years # WAS: ['Year 1', 'Year 2', 'Year 3']
         df_cfs = df_cfs.T # Transpose for line items as rows
         df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=1, header=True, 
             index_label='Line Item',
