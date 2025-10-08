@@ -162,3 +162,26 @@ label {
     display: inline-flex;
     align-items: center; 
 }
+
+.year-select-btn {
+    /* Inherit base button style, but make it smaller/less aggressive */
+    padding: 8px 15px; 
+    background-color: #f0f0f0; 
+    color: #333;
+    border: 1px solid #ccc;
+    font-weight: normal;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.year-select-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.selected-year-btn {
+    /* Style for the currently selected button */
+    background-color: #3b84f5; /* Match your H1 color */
+    color: white;
+    font-weight: bold;
+    border-color: #3b84f5;
+}
