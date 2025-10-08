@@ -113,7 +113,7 @@ def export_forecast():
     output = BytesIO()
     
     # Use pandas ExcelWriter to create multiple sheets
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl', float_format='%.1f') as writer:
         
         # --- Income Statement Sheet ---
         df_is = pd.DataFrame(forecast_results['excel_is'])
@@ -132,6 +132,34 @@ def export_forecast():
         df_cfs.index = ['Year 1', 'Year 2', 'Year 3']
         df_cfs = df_cfs.T # Transpose for line items as rows
         df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=1, header=True)
+
+
+    
+        # A dictionary mapping sheet names to their respective DataFrame indexes for calculation
+        sheet_index_map = {
+            'Income Statement': df_is.index,
+            'Balance Sheet': df_bs.index,
+            'Cash Flow Statement': df_cfs.index
+        }
+
+        for sheet_name, index_labels in sheet_index_map.items():
+            # Get the openpyxl worksheet object from the pandas ExcelWriter
+            worksheet = writer.sheets[sheet_name] 
+            
+            # Find the maximum length of the index labels (Line Item descriptions)
+            # Add a small buffer (+2) for safety/padding
+            max_len = max(len(str(s)) for s in index_labels) + 2 
+            
+            # Also check the length of the column header (e.g., 'Line Item' or 'Year 0')
+            header_len = len('Line Item') + 2 # Assuming 'Line Item' is the column header from index_label
+            
+            # Use the greater of the label lengths or the header length
+            column_width = max(max_len, header_len)
+
+            # Set the width of the first column (Column A is column index 0)
+            # The 'A' column holds the labels we want to autofit.
+            worksheet.column_dimensions['A'].width = column_width
+            
 
     # Move buffer position to the start and send the file
     output.seek(0)
