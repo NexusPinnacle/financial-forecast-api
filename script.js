@@ -3,7 +3,7 @@
 // URL for your Flask API running locally
 // *** REMEMBER TO UPDATE THIS URL WHEN YOU DEPLOY! ***
 const API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/forecast'; 
-
+const EXPORT_API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/export'; 
 const form = document.getElementById('forecastForm');
 const resultsContainer = document.getElementById('results-container');
 const incomeStatementBody = document.querySelector('#incomeStatementTable tbody');
@@ -95,6 +95,111 @@ form.addEventListener('submit', async (e) => {
         resultsContainer.style.display = 'none';
     }
 });
+
+
+
+
+const exportBtn = document.getElementById('exportBtn');
+
+exportBtn.addEventListener('click', async () => {
+    // Prevent default form action, although it's a button, good practice
+    // Collect all input data, similar to the main submission
+    const data = {};
+    let allInputsValid = true;
+    const errorMessage = document.getElementById('error-message'); // Ensure error message element is accessible
+
+    try {
+        // Collect all input values (Same logic as the main form submission)
+        // Non-percentage inputs
+        data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
+        data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
+        data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
+        data.capex = parseFloat(document.getElementById('capex').value);
+
+        // Days & Initial Balance Inputs
+        data.dso_days = parseFloat(document.getElementById('dso_days').value);
+        data.dio_days = parseFloat(document.getElementById('dio_days').value);
+        data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
+        data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
+        
+        // Percentage inputs (converted to decimal for backend)
+        data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
+        data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
+        data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
+        data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
+        data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+
+        // CRITICAL CHECK: Ensure no required field is NaN
+        for (const key in data) {
+             // Only check for fields that are typically not zeroed out by default, but check for NaN across the board
+             // A quick check that relies on the user running the forecast first
+            if (isNaN(data[key])) {
+                allInputsValid = false;
+                break;
+            }
+        }
+
+        if (!allInputsValid) {
+            errorMessage.textContent = 'Please run the forecast and ensure all fields have valid numbers before exporting.';
+            return;
+        }
+        
+        errorMessage.textContent = 'Generating Excel file... This may take a moment.';
+
+        // 2. Call the new Python Backend Export API
+        const response = await fetch(EXPORT_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        // 3. Handle the file download response
+        if (response.ok) {
+            errorMessage.textContent = 'Excel file downloaded successfully.';
+            
+            // Get the suggested filename from the backend's header
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = 'Financial_Forecast.xlsx';
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    // Remove quotes from filename if present
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Create a temporary link element to trigger the download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename; 
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } else {
+            // Read the error message if the response is not a file
+            const errorText = await response.text();
+            errorMessage.textContent = `Export Error: ${errorText || response.statusText}`;
+        }
+
+    } catch (error) {
+        console.error("Export error:", error);
+        errorMessage.textContent = `An unexpected export error occurred: ${error.message}`;
+    }
+});
+
+
+
+
 
 
 /**
