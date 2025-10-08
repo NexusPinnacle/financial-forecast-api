@@ -10,6 +10,30 @@ const incomeStatementBody = document.querySelector('#incomeStatementTable tbody'
 const balanceSheetBody = document.querySelector('#balanceSheetTable tbody');
 const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
+const yearButtons = document.querySelectorAll('.year-select-btn');
+const forecastYearsInput = document.getElementById('forecast_years');
+
+
+// ----------------------------------------------------
+// NEW: LOGIC TO HANDLE YEAR BUTTON CLICKS
+// ----------------------------------------------------
+yearButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        // 1. Remove 'selected' class from all buttons
+        yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
+        
+        // 2. Add 'selected' class to the clicked button
+        button.classList.add('selected-year-btn');
+        
+        // 3. Update the hidden input value
+        const newYears = button.getAttribute('data-years');
+        forecastYearsInput.value = newYears;
+        
+        // Optional: Clear results if forecast length changes
+        // document.getElementById('results-container').innerHTML = '';
+    });
+});
+// ----------------------------------------------------
 
 
 // Global variable to hold the chart instance
@@ -57,6 +81,11 @@ form.addEventListener('submit', async (e) => {
                 throw new Error(`Invalid value for ${key}.`);
             }
         }
+
+
+        // Append the selected number of years to the data object
+        data.years = parseInt(forecastYearsInput.value, 10);
+
         
         // 2. Call the Python Backend API 
         const response = await fetch(API_URL, {
@@ -147,7 +176,9 @@ exportBtn.addEventListener('click', async () => {
         }
         
         errorMessage.textContent = 'Generating Excel file... This may take a moment.';
-
+        
+        data.years = parseInt(forecastYearsInput.value, 10); 
+        
         // 2. Call the new Python Backend Export API
         const response = await fetch(EXPORT_API_URL, {
             method: 'POST',
@@ -222,7 +253,34 @@ function renderResults(data, currencySymbol) {
         return sign + currencySymbol + absoluteValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     };
 
-    const years = data.Years.length; // Will be 4 (Year 0 to Year 3)
+    const years = data["Years"].slice(1); // [1, 2, 3] or [1, 2, 3, 4, 5], etc.
+
+    // ----------------------------------------------------
+    // CHANGE: DYNAMICALLY CREATE TABLE HEADERS
+    // ----------------------------------------------------
+    
+    const tableIds = ['incomeStatementTable', 'balanceSheetTable', 'cashFlowTable'];
+    tableIds.forEach(id => {
+        const table = document.getElementById(id);
+        const thead = table.querySelector('thead');
+        
+        // 1. Clear existing header
+        thead.innerHTML = ''; 
+        
+        // 2. Create the new row
+        const headerRow = thead.insertRow();
+        const headerCell = document.createElement('th');
+        headerCell.textContent = 'Line Item';
+        headerRow.appendChild(headerCell);
+
+        // 3. Add year headers dynamically
+        years.forEach(year => {
+            const yearCell = document.createElement('th');
+            yearCell.textContent = `Year ${year}`;
+            headerRow.appendChild(yearCell);
+        });
+        
+    });
     
     // Read the static CapEx value ONCE before the loop
     const capExValue = -parseFloat(document.getElementById('capex').value);
