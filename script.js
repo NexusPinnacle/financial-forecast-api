@@ -254,14 +254,27 @@ function renderResults(data, currencySymbol) {
     };
 
     const years = data["Years"].slice(1); // [1, 2, 3] or [1, 2, 3, 4, 5], etc.
+        // The full range of years (e.g., [0, 1, 2, 3] or [0, 1, 2, 3, 4, 5])
+    const allYears = data["Years"]; 
+    
+    // Years for Income Statement (IS) and Cash Flow Statement (CFS): [1, 2, 3...]
+    const is_cfs_years = allYears.slice(1); 
+    
+    // Years for Balance Sheet (BS): [0, 1, 2, 3...]
+    const bs_years = allYears; 
 
-    // ----------------------------------------------------
-    // CHANGE: DYNAMICALLY CREATE TABLE HEADERS
+// ----------------------------------------------------
+    // FIX A: DYNAMICALLY CREATE TABLE HEADERS
     // ----------------------------------------------------
     
-    const tableIds = ['incomeStatementTable', 'balanceSheetTable', 'cashFlowTable'];
-    tableIds.forEach(id => {
-        const table = document.getElementById(id);
+    const tableConfigs = [
+        { id: 'incomeStatementTable', years: is_cfs_years, body: incomeStatementBody },
+        { id: 'balanceSheetTable', years: bs_years, body: balanceSheetBody }, // Use bs_years for BS
+        { id: 'cashFlowTable', years: is_cfs_years, body: cashFlowBody } // Use is_cfs_years for CFS
+    ];
+
+    tableConfigs.forEach(config => {
+        const table = document.getElementById(config.id);
         const thead = table.querySelector('thead');
         
         // 1. Clear existing header
@@ -274,9 +287,14 @@ function renderResults(data, currencySymbol) {
         headerRow.appendChild(headerCell);
 
         // 3. Add year headers dynamically
-        years.forEach(year => {
+        config.years.forEach(year => { // Use the correct year list (is_cfs_years or bs_years)
             const yearCell = document.createElement('th');
-            yearCell.textContent = `Year ${year}`;
+            // FIX: If the table is BS and the year is 0, label it 'Year 0 (Initial)'
+            if (config.id === 'balanceSheetTable' && year === 0) {
+                yearCell.textContent = 'Year 0 (Initial)';
+            } else {
+                yearCell.textContent = `Year ${year}`;
+            }
             headerRow.appendChild(yearCell);
         });
         
@@ -288,132 +306,61 @@ function renderResults(data, currencySymbol) {
 
     // --- RENDER INCOME STATEMENT ---
     
-    const isItems = [
-        { label: "Revenue", dataKey: "Revenue", isBold: true },
-        { label: "Cost of Goods Sold", dataKey: "COGS" }, 
-        { label: "Gross Profit", dataKey: "Gross Profit", isBold: true },
-        { label: "Fixed Operating Expenses", dataKey: "Fixed Opex" }, 
-        { label: "Depreciation", dataKey: "Depreciation" },
-        { label: "EBIT", dataKey: "EBIT", isBold: true },
-        { label: "Interest Expense", dataKey: "Interest Expense" },
-        { label: "EBT", dataKey: "EBT", isBold: true }, 
-        { label: "Taxes", dataKey: "Taxes" }, 
-        { label: "Net Income", dataKey: "Net Income", isBold: true }
+ const forecastData = [
+        // Income Statement (PL) - Data starts from index 1 (Year 1)
+        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+
+
+        // Balance Sheet (BS) - Data starts from index 0 (Year 0)
+        // FIX: Ensure startIdx is 0 for all Balance Sheet items
+        { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Net PP&E", dataKey: "Closing PP&E", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Total Assets", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
+          // FIX: The calculation must include Year 0 data
+          calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), 
+          startIdx: 0 
+        },
+        { label: "Accounts Payable", dataKey: "Closing AP", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Total Liabilities & Equity", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
+          // FIX: The calculation must include Year 0 data
+          calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), 
+          startIdx: 0 
+        },
+
+
+        // Cash Flow Statement (CFS) - Data starts from index 1 (Year 1)
+        // FIX: Ensure startIdx is 1 for all Cash Flow Statement items
+        { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
+        { label: "Cash Flow from Operations", dataKey: "CFO", tableBody: cashFlowBody, isBold: true, 
+          // FIX: Use the Net Income + Depreciation - Change in NWC calculation, sliced from [1:]
+          calculation: (d) => d["Net Income"].map((val, i) => val + d["Depreciation"][i] - d["Change in NWC"][i]), 
+          startIdx: 1
+        },
+        { label: "Cash Flow from Investing (CapEx)", dataKey: "CapEx", tableBody: cashFlowBody, 
+            // FIX: CapEx is not in data keys, assume a fixed negative CapEx value is calculated internally
+            calculation: (d) => { /* Requires CapEx value from inputs or forecaster, assuming it's calculated in forecaster, but you didn't include it in final results for CFS */ return data["Revenue"].slice(1).map(val => -parseFloat(document.getElementById('capex').value)); },
+            startIdx: 1
+        },
+        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
+        
     ];
 
-    isItems.forEach(item => {
-        const row = incomeStatementBody.insertRow();
-        
-        if (item.isBold) {
-            row.classList.add('is-bold-row');
-        }
-        
-        row.insertCell().textContent = item.label;
-
-        // FIX: Use .slice(1) to skip Year 0
-        data[item.dataKey].slice(1).forEach(value => {
-            // Updated to use the format function which includes the currencySymbol
-            row.insertCell().textContent = format(value); 
-        });
-    });
-
-    // --- RENDER BALANCE SHEET (Processes ALL 4 years, i=0 to i=3) ---
-
-    const nwc = [];
-    const capitalEmployed = [];
-    const totalAssets = [];
-    const totalLiabilitiesAndEquity = [];
-    
-    // 1. Calculate the new total metrics for ALL years (i=0 to 3)
-    for (let i = 0; i < years; i++) { 
-        // NWC = AR + Inventory - AP
-        const currentNWC = (data["Closing AR"][i] + data["Closing Inventory"][i]) - data["Closing AP"][i];
-        nwc.push(currentNWC);
-        
-        // Capital Employed = NWC + Net PP&E
-        const currentCE = currentNWC + data["Closing PP&E"][i];
-        capitalEmployed.push(currentCE);
-
-        // TOTAL ASSETS = Cash + AR + Inventory + PP&E
-        const currentAssets = data["Closing Cash"][i] + data["Closing AR"][i] + data["Closing Inventory"][i] + data["Closing PP&E"][i];
-        totalAssets.push(currentAssets);
-        
-        // TOTAL LIABILITIES & EQUITY = AP + Debt + RE
-        const currentL_E = data["Closing AP"][i] + data["Closing Debt"][i] + data["Closing RE"][i];
-        totalLiabilitiesAndEquity.push(currentL_E);
-    }
-
-    // 2. Define the Balance Sheet items
-    const bsItems = [
-        // --- Current Operating Assets ---
-        { label: "Cash", dataKey: "Closing Cash" }, 
-        { label: "Accounts Receivable", dataKey: "Closing AR" }, 
-        { label: "Inventory", dataKey: "Closing Inventory" }, 
-
-        // --- Non-Current Assets ---
-        { label: "Net PP&E", dataKey: "Closing PP&E" },
-        
-        // --- Total Assets Line ---
-        { label: "TOTAL ASSETS", dataKey: "Total Assets", values: totalAssets, isTotal: true, isHeavyTotal: true }, 
-        
-        // --- Liabilities & Equity ---
-        { label: "Accounts Payable", dataKey: "Closing AP" }, 
-        { label: "Debt", dataKey: "Closing Debt" }, 
-        { label: "Retained Earnings", dataKey: "Closing RE" },
-
-        // --- Final Subtotal: Liabilities & Equity ---
-        { label: "TOTAL LIABILITIES & EQUITY", dataKey: "Total L&E", values: totalLiabilitiesAndEquity, isTotal: true, isHeavyTotal: true },
-
-        // --- Subtotal: Net Working Capital ---
-        { label: "Net Working Capital (NWC)", dataKey: "NWC", values: nwc, isTotal: true },
-        { label: "Capital Employed", dataKey: "CapitalEmployed", values: capitalEmployed, isTotal: true }
-    ];
-
-    // 3. Render the table
-    bsItems.forEach(item => {
-        const row = balanceSheetBody.insertRow();
-        row.insertCell().textContent = item.label;
-
-        // Determine which list to use: 'values' for calculated items, 'dataKey' for API data
-        const listToRender = item.values || data[item.dataKey];
-        
-        // NO .slice(1) HERE
-        listToRender.forEach(value => {
-            const cell = row.insertCell();
-            // Updated to use the format function which includes the currencySymbol
-            cell.textContent = format(value);
-            
-            if (item.isTotal) { 
-                cell.classList.add('total-cell'); 
-                row.classList.add('total-row');
-            }
-            if (item.isHeavyTotal) {
-                row.classList.add('heavy-total-row');
-            }
-        });
-    });
-    
-// --- RENDER CASH FLOW STATEMENT (Starts loop at i=1 to skip Year 0) ---
-
-    const netChangeInCash = data["Net Change in Cash"]; 
-    const cffResults = data["Cash Flow from Financing"]; // <-- GET NEW CFF DATA
-    
-    // Start loop at i=1
-    for (let i = 1; i < years; i++) { // i goes 1, 2, 3
-        
-        // Calculate the core components for the CFS display for the current year
-        const cfo = data["Net Income"][i] + data["Depreciation"][i] - data["Change in NWC"][i];
-        
-        // Create the Cash Flow items with calculated values for YEAR i
-        const cfsLineItems = [
-            { label: "Net Income", value: data["Net Income"][i] },
-            { label: "Add: Depreciation", value: data["Depreciation"][i] },
-            { label: "Less: Change in NWC", value: -data["Change in NWC"][i] }, 
-            { label: "Cash Flow from Operations", value: cfo, isTotal: true, isBold: true }, 
-            { label: "Cash Flow from Investing (CapEx)", value: capExValue, isBold: true }, 
-            { label: "Cash Flow from Financing", value: cffResults[i], isBold: true }, // <-- USE THE BACKEND'S CFF VALUE
-            { label: "Net Change in Cash", value: netChangeInCash[i], isTotal: true, isBold: true }
-        ];
         
         // Ensure the table has rows for all line items across all years
         cfsLineItems.forEach((item, rowIndex) => {
