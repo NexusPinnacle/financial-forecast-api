@@ -388,7 +388,8 @@ if (config.dataKey) {
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         
         // *** FIX 1: Correct indexing for CFO calculation ***
-        { label: "Cash Flow from Operations", dataKey: "CFO", tableBody: cashFlowBody, isBold: true, 
+        { label: "Cash Flow from Operations", tableBody: cashFlowBody, isBold: true, 
+          // ❌ REMOVE dataKey: "CFO"
           calculation: (d) => {
               const start = 1;
               const netIncome = d["Net Income"].slice(start);
@@ -396,13 +397,14 @@ if (config.dataKey) {
               const nwc = d["Change in NWC"].slice(start);
               return netIncome.map((val, i) => val + depreciation[i] - nwc[i]); 
           },
-          startIdx: 0 // Array is already sliced and calculated correctly
+          startIdx: 0 // This is correct, as the calculation returns the final, sliced array
         },
         
         // *** FIX 2: Correct indexing for CapEx calculation ***
-        { label: "Cash Flow from Investing (CapEx)", dataKey: "CapEx", tableBody: cashFlowBody, 
-          calculation: (d) => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)),
-          startIdx: 0 // Array is already correctly sized
+        { label: "Cash Flow from Investing (CapEx)", tableBody: cashFlowBody, 
+          // ❌ REMOVE dataKey: "CapEx"
+          calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)),
+          startIdx: 0 // This is correct
         },
         
         { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1 },
