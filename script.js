@@ -361,33 +361,32 @@ function renderResults(data, currencySymbol) {
         
     ];
 
-        
-        // Ensure the table has rows for all line items across all years
-        cfsLineItems.forEach((item, rowIndex) => {
-            // Only insert the line item row once when i is 1
-            if (i === 1) { 
-                const newRow = cashFlowBody.insertRow(rowIndex);
-                newRow.insertCell().textContent = item.label;
-                if (item.isTotal) { newRow.classList.add('total-row'); }
-                
-                // Apply the bold class
-                if (item.isBold) {
-                    newRow.classList.add('is-bold-row');
-                }
-            }
-            
-            // Get the row created in the step above
-            const yearRow = cashFlowBody.rows[rowIndex];
-            
-            // Insert the cell into column 'i'. (i=1 is the first data column after the label)
-            if (yearRow) {
-                const newCell = yearRow.insertCell(i); 
-                // Updated to use the format function which includes the currencySymbol
-                newCell.textContent = format(item.value);
-                if (item.isTotal) { newCell.classList.add('total-cell'); }
-            }
-        });
-    }
+      // Ensure the table has rows for all line items across all years
+        cfsLineItems.forEach((item, rowIndex) => { // <--- This line is the start of the flawed loop
+            // Only insert the line item row once when i is 1
+            if (i === 1) { 
+                const newRow = cashFlowBody.insertRow(rowIndex);
+                newRow.insertCell().textContent = item.label;
+                if (item.isTotal) { newRow.classList.add('total-row'); }
+                
+                // Apply the bold class
+                if (item.isBold) {
+                    newRow.classList.add('is-bold-row');
+                }
+            }
+            
+            // Get the row created in the step above
+            const yearRow = cashFlowBody.rows[rowIndex];
+            
+            // Insert the cell into column 'i'. (i=1 is the first data column after the label)
+            if (yearRow) {
+                const newCell = yearRow.insertCell(i); 
+                // Updated to use the format function which includes the currencySymbol
+                newCell.textContent = format(item.value);
+                if (item.isTotal) { newCell.classList.add('total-cell'); }
+            }
+        });
+    
     // *** CRITICAL ADDITION: CALL THE CHART FUNCTION HERE ***
     renderCharts(data);
     
