@@ -60,7 +60,8 @@ def forecast():
             "initial_cash": float(data.get('initial_cash')),
             "interest_rate": float(data.get('interest_rate')),
             # FIX: Use a default value (0.0) if 'annual_debt_repayment' is missing
-            "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)) 
+            "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)),
+            "years": int(data.get('years', 3)) # Default to 3 if not provided
         }
     except ValueError:
         return jsonify({"error": "Invalid number format received."}), 400
@@ -101,7 +102,8 @@ def export_forecast():
             "initial_debt": float(data.get('initial_debt')), 
             "initial_cash": float(data.get('initial_cash')),
             "interest_rate": float(data.get('interest_rate')),
-            "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0))
+            "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)),
+            "years": int(data.get('years', 3)) # Default to 3 if not provided
         }
     except ValueError:
         return jsonify({"error": "Invalid number format received."}), 400
