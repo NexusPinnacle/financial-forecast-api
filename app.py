@@ -113,7 +113,13 @@ def export_forecast():
     
     # 4. Use pandas to create the Excel file in memory
     output = BytesIO()
-    
+
+    # --- NEW: Dynamically generate year labels based on the input 'years' ---
+    # The number of forecast years (e.g., 3, 5, or 10)
+    num_years = inputs['years'] 
+    is_cfs_years = [f'Year {i}' for i in range(1, num_years + 1)] # [Year 1, Year 2, ...]
+    bs_years = ['Year 0'] + is_cfs_years # [Year 0, Year 1, Year 2, ...]
+
     # Use pandas ExcelWriter to create multiple sheets
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         
