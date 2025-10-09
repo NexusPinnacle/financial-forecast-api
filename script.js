@@ -354,16 +354,16 @@ if (config.dataKey) {
     
     const forecastData = [
         // Income Statement (PL) - Data starts from index 1 (Year 1)
-        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Revenue", customClass: 'heavy-total-row', dataKey: "Revenue", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
         { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Gross Profit", customClass: 'heavy-total-row', dataKey: "Gross Profit", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
         { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "EBIT", customClass: 'heavy-total-row', dataKey: "EBIT", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
         { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "EBT", customClass: 'heavy-total-row', dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Net Income", customClass: 'heavy-total-row', dataKey: "Net Income", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
 
         // Balance Sheet (BS) - Data starts from index 0 (Year 0)
         { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
@@ -388,7 +388,7 @@ if (config.dataKey) {
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         
         // *** FIX 1: Correct indexing for CFO calculation ***
-        { label: "Cash Flow from Operations", tableBody: cashFlowBody, isBold: true, 
+        { label: "Cash Flow from Operations", customClass: 'heavy-total-row', tableBody: cashFlowBody, isBold: true, 
           // ❌ REMOVE dataKey: "CFO"
           calculation: (d) => {
               const start = 1;
@@ -401,13 +401,13 @@ if (config.dataKey) {
         },
         
         // *** FIX 2: Correct indexing for CapEx calculation ***
-        { label: "Cash Flow from Investing (CapEx)", tableBody: cashFlowBody, 
+        { label: "Cash Flow from Investing (CapEx)", customClass: 'heavy-total-row', tableBody: cashFlowBody, isBold: true, 
           // ❌ REMOVE dataKey: "CapEx"
           calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)),
           startIdx: 0 // This is correct
         },
         
-        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
         
     ];
