@@ -42,44 +42,8 @@ input[type="number"] {
     text-align: right;
 }
 
-/* STYLES for horizontal year-specific inputs */
-.input-row-label {
-    margin-bottom: 8px;
-}
-.input-row-label label {
-    font-weight: bold;
-}
-.revenue-inputs-horizontal {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding-left: 5px; /* Small indent */
-}
-.year-input-group {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-width: 75px;
-}
-.year-input-group label {
-    font-size: 0.85em;
-    color: #666;
-    margin-bottom: 4px;
-    text-align: center;
-    font-weight: normal;
-    flex-basis: auto; /* Override default */
-}
-.year-input-group input[type="number"] {
-    width: 100%;
-    box-sizing: border-box;
-    flex-basis: auto; /* Override default */
-}
-/* END OF STYLES */
-
-
 button {
-    background-color: #003b5c;
+    background-color: #003b5c; /* #28a745 Green for action */
     color: white;
     padding: 12px 20px;
     border: none;
@@ -95,6 +59,7 @@ button:hover {
     background-color: #218838;
 }
 
+/* Table Styling for Results */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -105,18 +70,21 @@ table {
 th, td {
     border: 1px solid #ddd;
     padding: 10px;
-    text-align: right;
+    text-align: right; /* Financials are usually right-aligned */
 }
 
-th:first-child, td:first-child {
+/* Original rule replaced/modified: */
+th:first-child {
     text-align: left;
-    font-weight: bold;
+    font-weight: bold; /* Keep the 'Line Item' header bold */
 }
 
 td:first-child {
-    font-weight: normal;
+    text-align: left;
+    font-weight: normal; /* Default all labels to normal (non-bold) */
 }
 
+/* These rules must be present to make the selected lines bold */
 .is-bold-row td, .heavy-total-row td {
     font-weight: bold;
 }
@@ -132,36 +100,71 @@ thead th {
     margin-top: 10px;
 }
 
+/* style.css */
+
+/* ... (Existing styles above) ... */
+
+/* New rule to make bold line items stand out */
+.is-bold-row td {
+    font-weight: bold;
+}
+
+/* style.css */
+
+/* ... (Existing styles above) ... */
+
+/* Rule to ensure the heavy total rows on the Balance Sheet are bold */
+.heavy-total-row td {
+    font-weight: bold;
+}
+
+/* style.css */
+
+/* Add styling for the select dropdown to match number inputs */
 select {
+    /* Match the width of input[type="number"] */
     flex-basis: 35%;
+    /* Match padding and borders */
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    /* Ensure height consistency */
     text-align: right;
+
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-color: white;
+    background-color: white; /* Ensure background is white */
 }
 
+/* style.css */
+
+/* Tooltip Trigger Styling */
 .tooltip-trigger {
+    /* Make it look clickable/informational */
     cursor: help; 
-    color: #007bff;
+    color: #007bff; /* Blue color */
     font-size: 0.9em;
     font-weight: normal;
+    
+    /* Ensure it aligns well with the label text */
     margin-left: 5px;
 }
 
+/* Optional: Subtle hover effect */
 .tooltip-trigger:hover {
     color: #0056b3;
 }
 
+/* You can also add more advanced styles to the label itself if you want to control the text wrapping */
 label {
+    /* Ensures the label has space for the question mark */
     display: inline-flex;
     align-items: center; 
 }
 
 .year-select-btn {
+    /* Inherit base button style, but make it smaller/less aggressive */
     padding: 8px 15px; 
     background-color: #f0f0f0; 
     color: #333;
@@ -176,9 +179,9 @@ label {
 }
 
 .selected-year-btn {
-    background-color: #3b84f5;
+    /* Style for the currently selected button */
+    background-color: #3b84f5; /* Match your H1 color */
     color: white;
     font-weight: bold;
     border-color: #3b84f5;
 }
-
