@@ -18,25 +18,24 @@ let revenueChart = null;
 let cashDebtChart = null;
 
 /**
- * NEW: Shows/hides year-specific revenue growth inputs based on selected forecast duration.
- * Also updates the label of the last visible input to say "(and thereafter)".
+ * MODIFIED: Shows/hides year-specific revenue growth inputs and updates labels for horizontal layout.
  * @param {number} yearsToShow - The number of years to show inputs for (3, 5, or 10).
  */
 function updateRevenueGrowthInputs(yearsToShow) {
-    const allGrowthInputs = revenueGrowthContainer.querySelectorAll('.input-group');
+    const allGrowthInputs = revenueGrowthContainer.querySelectorAll('.year-input-group');
     
     allGrowthInputs.forEach(inputDiv => {
         const year = parseInt(inputDiv.dataset.year, 10);
         const label = inputDiv.querySelector('label');
         
         // Reset label text first
-        label.textContent = `Revenue Growth Year ${year} (%):`;
+        label.textContent = `Year ${year}`;
         
         if (year <= yearsToShow) {
-            inputDiv.style.display = 'flex'; // Show the input
+            inputDiv.style.display = 'flex'; // Use 'flex' to show the column-oriented group
             if (year === yearsToShow) {
-                // Add "(and thereafter)" to the last visible input's label
-                label.textContent = `Revenue Growth Year ${year} (and thereafter) (%):`;
+                // Add a plus sign to indicate "(and thereafter)"
+                label.textContent = `Year ${year}+`;
             }
         } else {
             inputDiv.style.display = 'none'; // Hide the input
@@ -55,7 +54,6 @@ yearButtons.forEach(button => {
         const newYears = button.getAttribute('data-years');
         forecastYearsInput.value = newYears;
         
-        // Call the new function to update the UI
         updateRevenueGrowthInputs(parseInt(newYears, 10));
     });
 });
@@ -117,14 +115,12 @@ function collectInputData() {
     const data = {};
     const years = parseInt(forecastYearsInput.value, 10);
     
-    // --- NEW: Collect year-specific revenue growth rates ---
     data.revenue_growth_rates = [];
     for (let i = 1; i <= years; i++) {
         const value = parseFloat(document.getElementById(`revenue_growth_y${i}`).value) / 100;
         data.revenue_growth_rates.push(value);
     }
 
-    // Collect other inputs
     data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
     data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
     data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
@@ -141,7 +137,6 @@ function collectInputData() {
     data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
     data.years = years;
 
-    // Validate all collected data
     for (const key in data) {
         const value = data[key];
         if (Array.isArray(value)) {
@@ -186,7 +181,6 @@ function renderResults(data, currencySymbol) {
     const is_cfs_years = allYears.slice(1); 
     const bs_years = allYears; 
     
-    // Dynamically create table headers
     const tableConfigs = [
         { id: 'incomeStatementTable', years: is_cfs_years },
         { id: 'balanceSheetTable', years: bs_years },
@@ -222,21 +216,17 @@ function renderResults(data, currencySymbol) {
         });
     };
     
-    // Data definitions for rendering tables
     const forecastData = [
-        // Income Statement
-        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
-
-        // Balance Sheet
         { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
@@ -246,14 +236,12 @@ function renderResults(data, currencySymbol) {
         { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Total Liabilities & Equity", calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-
-        // Cash Flow Statement
         { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true },
+        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
     ];
     
@@ -295,7 +283,6 @@ function renderCharts(data) {
         }
     }];
 
-    // Using a map to hold chart instances { 'revenueChart': chartInstance }
     const charts = { revenueChart, cashDebtChart };
 
     chartConfigs.forEach(cfg => {
@@ -303,14 +290,12 @@ function renderCharts(data) {
         charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
     });
 
-    // Re-assign global variables
     revenueChart = charts.revenueChart;
     cashDebtChart = charts.cashDebtChart;
 }
 
-
 // --- Initial Setup ---
-// Set the initial visibility of revenue growth inputs when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     updateRevenueGrowthInputs(3); // Default to 3 years
 });
+
