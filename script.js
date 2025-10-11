@@ -225,12 +225,12 @@ function renderResults(data, currencySymbol) {
     // Data definitions for rendering tables
     const forecastData = [
         // Income Statement
-        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
+        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
+        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
+        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
@@ -252,8 +252,8 @@ function renderResults(data, currencySymbol) {
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true },
-        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true },
+        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
     ];
     
