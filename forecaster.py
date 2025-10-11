@@ -5,7 +5,7 @@ DAYS = 365 # Constant for converting days to percentage of a year
 
 def generate_forecast(
     initial_revenue,
-    revenue_growth,
+    revenue_growth_rates, # CHANGED: from revenue_growth to revenue_growth_rates (list)
     cogs_pct,
     fixed_opex,
     tax_rate,
@@ -21,9 +21,9 @@ def generate_forecast(
     annual_debt_repayment,
     years=3
 ):
-    """Calculates the 3-year integrated financial forecast, including Year 0."""
+    """Calculates the integrated financial forecast using year-specific growth rates."""
 
-    # 1. Initialize ALL lists (4 years: Year 0 to Year 3)
+    # 1. Initialize ALL lists (years + 1 to include Year 0)
     revenue = [0.0] * (years + 1)
     cogs = [0.0] * (years + 1)
     
@@ -48,47 +48,42 @@ def generate_forecast(
     # Cash Flow Statement Components
     change_in_nwc = [0.0] * (years + 1)
     net_change_in_cash = [0.0] * (years + 1)
-    cash_flow_from_financing = [0.0] * (years + 1) # <--- NEW CFF LIST
+    cash_flow_from_financing = [0.0] * (years + 1)
     
     # Fixed Opex List (Needed for JS display)
     fixed_opex_list = [fixed_opex] * (years + 1)
-
-    # Debt Repayment List (Needed for JS display)
-    # Repayment starts in Year 1, Year 0 is 0.0
-    debt_repayment_list = [0.0, annual_debt_repayment, annual_debt_repayment, annual_debt_repayment] 
-    # Use max() to ensure a repayment doesn't push debt below zero if initial_debt is small.
-
 
     # Set Year 0 (Base Case)
     revenue[0] = initial_revenue
     ppe_closing[0] = initial_ppe
     debt_closing[0] = initial_debt
     cash_closing[0] = initial_cash
-    # retained_earnings[0] will be calculated as the plug (next)
     
-    # Calculate Year 0 NWC Accounts based on initial revenue/cogs and days inputs
-    ar_closing[0] = initial_revenue * (dso_days / DAYS)         # Asset
-    inventory_closing[0] = (initial_revenue * cogs_pct) * (dio_days / DAYS) # Asset
-    ap_closing[0] = (initial_revenue * cogs_pct) * (dpo_days / DAYS)        # Liability
+    # Calculate Year 0 NWC Accounts
+    ar_closing[0] = initial_revenue * (dso_days / DAYS)
+    inventory_closing[0] = (initial_revenue * cogs_pct) * (dio_days / DAYS)
+    ap_closing[0] = (initial_revenue * cogs_pct) * (dpo_days / DAYS)
 
-    # -----------------------------------------------------------
-    # FIX: Calculate Retained Earnings (The Year 0 Balancing Plug)
-    # Total Assets = Cash + AR + Inventory + PP&E
+    # Calculate Retained Earnings (The Year 0 Balancing Plug)
     total_assets_0 = cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]
-    
-    # Total Liabilities = AP + Debt
     total_liabilities_0 = ap_closing[0] + debt_closing[0]
-    
-    # Retained Earnings [Year 0] = Total Assets - Total Liabilities
     retained_earnings[0] = total_assets_0 - total_liabilities_0
-    # -----------------------------------------------------------
     
-
-    # 2. Run the forecast loop (Years 1, 2, 3)
+    # 2. Run the forecast loop for each year
     for i in range(1, years + 1):
         
         # --- INCOME STATEMENT ---
-        revenue[i] = revenue[i-1] * (1 + revenue_growth)
+        
+        # NEW LOGIC: Use the correct growth rate for the current year
+        # It uses the rate for the year if available, otherwise uses the last provided rate.
+        if revenue_growth_rates:
+            growth_rate_index = min(i - 1, len(revenue_growth_rates) - 1)
+            current_growth_rate = revenue_growth_rates[growth_rate_index]
+        else:
+            current_growth_rate = 0 # Default to 0 if list is empty
+
+        revenue[i] = revenue[i-1] * (1 + current_growth_rate)
+        
         cogs[i] = revenue[i] * cogs_pct
         gross_profit[i] = revenue[i] - cogs[i] 
         
@@ -97,22 +92,13 @@ def generate_forecast(
         opening_ppe = ppe_closing[i-1]
         depreciation[i] = opening_ppe * depreciation_rate
         
-        # EBIT
         ebit[i] = gross_profit[i] - fixed_opex - depreciation[i] 
-        
-        # EBT (Earnings Before Tax)
         ebt[i] = ebit[i] - interest_expense[i] 
-        
-        # Taxes
         taxes[i] = max(0, ebt[i]) * tax_rate 
-        
-        # Net Income
         net_income[i] = ebt[i] - taxes[i]
         
         # --- BALANCE SHEET & CASH FLOW ACCOUNTS ---
-        ar_opening = ar_closing[i-1]
-        inventory_opening = inventory_closing[i-1]
-        ap_opening = ap_closing[i-1]
+        ar_opening, inventory_opening, ap_opening = ar_closing[i-1], inventory_closing[i-1], ap_closing[i-1]
 
         ar_closing[i] = revenue[i] * (dso_days / DAYS)
         inventory_closing[i] = cogs[i] * (dio_days / DAYS)
@@ -127,104 +113,57 @@ def generate_forecast(
         ppe_closing[i] = opening_ppe + capex - depreciation[i]
         
         # --- DEBT & RE CALCULATION ---
-        # The new debt closing balance is the prior year's balance MINUS repayment.
-        # Use max(0, ...) to ensure debt doesn't become negative.
-        debt_closing[i] = max(0, debt_closing[i-1] - annual_debt_repayment) # <--- 2. UPDATED DEBT LOGIC
-        
-        re_opening = retained_earnings[i-1]
-        retained_earnings[i] = re_opening + net_income[i]
+        debt_closing[i] = max(0, debt_closing[i-1] - annual_debt_repayment)
+        retained_earnings[i] = retained_earnings[i-1] + net_income[i]
         
         # --- CASH FLOW STATEMENT (The Link) ---
         cfo = net_income[i] + depreciation[i] - change_in_nwc[i]
         cfi = -capex
         
-        # 3. Update CFF: If there is debt repayment, it is a negative cash flow.
-        current_repayment = min(debt_closing[i-1], annual_debt_repayment) # Actual cash flow is the lesser of last year's debt and the repayment amount
+        current_repayment = min(debt_closing[i-1], annual_debt_repayment)
         cff = -current_repayment
         
-        cash_flow_from_financing[i] = cff # Store for output
+        cash_flow_from_financing[i] = cff
         
         net_change_in_cash[i] = cfo + cfi + cff
         cash_closing[i] = cash_closing[i-1] + net_change_in_cash[i]
 
-
-    # 3. Format Output: Slice all lists
-    # Create the structure for IS, BS, and CFS lists (Years 1-3 for IS/CFS, Years 0-3 for BS)
-    
-    # --- Income Statement Structure (Years 1, 2, 3) ---
+    # 3. Format Output
     is_data = {
-        "Revenue": revenue[1:],
-        "COGS": cogs[1:],
-        "Gross Profit": gross_profit[1:],
-        "Fixed Operating Expenses": fixed_opex_list[1:],
-        "Depreciation": depreciation[1:],
-        "EBIT": ebit[1:],
-        "Interest Expense": interest_expense[1:],
-        "EBT": ebt[1:],
-        "Taxes": taxes[1:],
-        "Net Income": net_income[1:],
+        "Revenue": revenue[1:], "COGS": cogs[1:], "Gross Profit": gross_profit[1:],
+        "Fixed Operating Expenses": fixed_opex_list[1:], "Depreciation": depreciation[1:],
+        "EBIT": ebit[1:], "Interest Expense": interest_expense[1:], "EBT": ebt[1:],
+        "Taxes": taxes[1:], "Net Income": net_income[1:],
     }
 
-    # --- Balance Sheet Structure (Years 0, 1, 2, 3) ---
-    # Includes Year 0 for comparison
     bs_data = {
-        "Cash": cash_closing[0:],
-        "Accounts Receivable": ar_closing[0:],
-        "Inventory": inventory_closing[0:],
-        "Net PP&E": ppe_closing[0:],
-        "Accounts Payable": ap_closing[0:],
-        "Debt": debt_closing[0:],
-        "Retained Earnings": retained_earnings[0:],
+        "Cash": cash_closing, "Accounts Receivable": ar_closing, "Inventory": inventory_closing,
+        "Net PP&E": ppe_closing, "Accounts Payable": ap_closing, "Debt": debt_closing,
+        "Retained Earnings": retained_earnings,
     }
-
-    # --- Cash Flow Statement Components (Years 1, 2, 3) ---
-    # Invert NWC change for CFS presentation
+    
     change_in_nwc_cfs = [-x for x in change_in_nwc[1:]] 
     
     cfs_data = {
-        "Net Income": net_income[1:],
-        "Add: Depreciation": depreciation[1:],
+        "Net Income": net_income[1:], "Add: Depreciation": depreciation[1:],
         "Less: Change in NWC": change_in_nwc_cfs, 
-        "Cash Flow from Operations": [
-            net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, years + 1)
-        ],
-        "Cash Flow from Investing (CapEx)": [-capex] * years, # CapEx is a fixed outflow (already negative in list for this purpose)
+        "Cash Flow from Operations": [net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, years + 1)],
+        "Cash Flow from Investing (CapEx)": [-capex] * years,
         "Cash Flow from Financing": cash_flow_from_financing[1:],
         "Net Change in Cash": net_change_in_cash[1:],
     }
     
-    # --- Final Result Dictionary for JSON/API Output ---
-    # Preserve the existing structure for the main front-end tables/charts
     results = {
         "Years": list(range(years + 1)),
-        # IS Items
-        "Revenue": revenue[0:],
-        "COGS": cogs[0:],
-        "Gross Profit": gross_profit[0:],
-        "Fixed Opex": fixed_opex_list[0:],
-        "Depreciation": depreciation[0:],
-        "EBIT": ebit[0:],
-        "Interest Expense": interest_expense[0:],
-        "EBT": ebt[0:],
-        "Taxes": taxes[0:],
-        "Net Income": net_income[0:],
-        # BS Items
-        "Closing Cash": cash_closing[0:],
-        "Closing AR": ar_closing[0:],
-        "Closing Inventory": inventory_closing[0:],
-        "Closing PP&E": ppe_closing[0:],
-        "Closing AP": ap_closing[0:],
-        "Closing Debt": debt_closing[0:],
-        "Closing RE": retained_earnings[0:],
-        # CFS Items
-        "Change in NWC": change_in_nwc[0:],
-        "Cash Flow from Financing": cash_flow_from_financing[0:],
-        "Net Change in Cash": net_change_in_cash[0:],
-        
-        # --- NEW EXCEL DATA STRUCTURES (Used by the /api/export route) ---
-        "excel_is": is_data,
-        "excel_bs": bs_data,
-        "excel_cfs": cfs_data,
+        "Revenue": revenue, "COGS": cogs, "Gross Profit": gross_profit, "Fixed Opex": fixed_opex_list,
+        "Depreciation": depreciation, "EBIT": ebit, "Interest Expense": interest_expense,
+        "EBT": ebt, "Taxes": taxes, "Net Income": net_income,
+        "Closing Cash": cash_closing, "Closing AR": ar_closing, "Closing Inventory": inventory_closing,
+        "Closing PP&E": ppe_closing, "Closing AP": ap_closing, "Closing Debt": debt_closing,
+        "Closing RE": retained_earnings,
+        "Change in NWC": change_in_nwc, "Cash Flow from Financing": cash_flow_from_financing,
+        "Net Change in Cash": net_change_in_cash,
+        "excel_is": is_data, "excel_bs": bs_data, "excel_cfs": cfs_data,
     }
 
     return results
