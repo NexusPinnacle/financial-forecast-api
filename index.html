@@ -38,51 +38,53 @@
                 <input type="number" id="initial_revenue" value="1000" step="0.01" required>
             </div>
 
-            <!-- NEW: Year-Specific Revenue Growth Inputs -->
-            <div id="revenue-growth-container">
-                <div class="input-group" data-year="1">
-                    <label for="revenue_growth_y1">Revenue Growth Year 1 (%):</label>
+            <!-- MODIFIED: Year-Specific Revenue Growth Inputs in a Row -->
+            <div class="input-row-label">
+                <label>Revenue Growth Rate (%):</label>
+            </div>
+            <div id="revenue-growth-container" class="revenue-inputs-horizontal">
+                <div class="year-input-group" data-year="1">
+                    <label for="revenue_growth_y1">Year 1</label>
                     <input type="number" id="revenue_growth_y1" value="10" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="2">
-                    <label for="revenue_growth_y2">Revenue Growth Year 2 (%):</label>
+                <div class="year-input-group" data-year="2">
+                    <label for="revenue_growth_y2">Year 2</label>
                     <input type="number" id="revenue_growth_y2" value="8" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="3">
-                    <label for="revenue_growth_y3">Revenue Growth Year 3 (and thereafter) (%):</label>
+                <div class="year-input-group" data-year="3">
+                    <label for="revenue_growth_y3">Year 3+</label>
                     <input type="number" id="revenue_growth_y3" value="5" step="0.1" required>
                 </div>
-                <!-- Inputs for years 4-10 will be hidden/shown by JS -->
-                <div class="input-group" data-year="4" style="display: none;">
-                    <label for="revenue_growth_y4">Revenue Growth Year 4 (%):</label>
+                <div class="year-input-group" data-year="4" style="display: none;">
+                    <label for="revenue_growth_y4">Year 4</label>
                     <input type="number" id="revenue_growth_y4" value="5" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="5" style="display: none;">
-                    <label for="revenue_growth_y5">Revenue Growth Year 5 (and thereafter) (%):</label>
+                <div class="year-input-group" data-year="5" style="display: none;">
+                    <label for="revenue_growth_y5">Year 5+</label>
                     <input type="number" id="revenue_growth_y5" value="4" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="6" style="display: none;">
-                    <label for="revenue_growth_y6">Revenue Growth Year 6 (%):</label>
+                <div class="year-input-group" data-year="6" style="display: none;">
+                    <label for="revenue_growth_y6">Year 6</label>
                     <input type="number" id="revenue_growth_y6" value="4" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="7" style="display: none;">
-                    <label for="revenue_growth_y7">Revenue Growth Year 7 (%):</label>
+                <div class="year-input-group" data-year="7" style="display: none;">
+                    <label for="revenue_growth_y7">Year 7</label>
                     <input type="number" id="revenue_growth_y7" value="4" step="0.1" required>
                 </div>
-                 <div class="input-group" data-year="8" style="display: none;">
-                    <label for="revenue_growth_y8">Revenue Growth Year 8 (%):</label>
+                 <div class="year-input-group" data-year="8" style="display: none;">
+                    <label for="revenue_growth_y8">Year 8</label>
                     <input type="number" id="revenue_growth_y8" value="3" step="0.1" required>
                 </div>
-                 <div class="input-group" data-year="9" style="display: none;">
-                    <label for="revenue_growth_y9">Revenue Growth Year 9 (%):</label>
+                 <div class="year-input-group" data-year="9" style="display: none;">
+                    <label for="revenue_growth_y9">Year 9</label>
                     <input type="number" id="revenue_growth_y9" value="3" step="0.1" required>
                 </div>
-                <div class="input-group" data-year="10" style="display: none;">
-                    <label for="revenue_growth_y10">Revenue Growth Year 10 (and thereafter) (%):</label>
+                <div class="year-input-group" data-year="10" style="display: none;">
+                    <label for="revenue_growth_y10">Year 10+</label>
                     <input type="number" id="revenue_growth_y10" value="3" step="0.1" required>
                 </div>
             </div>
-            <!-- End of new section -->
+            <!-- End of modified section -->
 
             <div class="input-group">
                 <label for="cogs_pct">COGS as % of Revenue (%):</label>
@@ -172,3 +174,4 @@
 <script src="script.js"></script>
 </body>
 </html>
+
