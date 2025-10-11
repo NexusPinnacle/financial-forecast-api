@@ -22,7 +22,6 @@
         <form id="forecastForm">
             <input type="hidden" id="forecast_years" value="3"> 
             <h2>Baseline & Assumptions</h2>
-
             
             <div class="input-group">
                 <label for="currency_symbol">Select Currency:</label>
@@ -33,16 +32,57 @@
                     <option value="¥">JPY (¥)</option>
                 </select>
             </div>
-
             
             <div class="input-group">
                 <label for="initial_revenue">Initial Revenue (Year 0):</label>
                 <input type="number" id="initial_revenue" value="1000" step="0.01" required>
             </div>
-            <div class="input-group">
-                <label for="revenue_growth">Revenue Growth Rate (%):</label>
-                <input type="number" id="revenue_growth" value="10" step="0.1" required>
+
+            <!-- NEW: Year-Specific Revenue Growth Inputs -->
+            <div id="revenue-growth-container">
+                <div class="input-group" data-year="1">
+                    <label for="revenue_growth_y1">Revenue Growth Year 1 (%):</label>
+                    <input type="number" id="revenue_growth_y1" value="10" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="2">
+                    <label for="revenue_growth_y2">Revenue Growth Year 2 (%):</label>
+                    <input type="number" id="revenue_growth_y2" value="8" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="3">
+                    <label for="revenue_growth_y3">Revenue Growth Year 3 (and thereafter) (%):</label>
+                    <input type="number" id="revenue_growth_y3" value="5" step="0.1" required>
+                </div>
+                <!-- Inputs for years 4-10 will be hidden/shown by JS -->
+                <div class="input-group" data-year="4" style="display: none;">
+                    <label for="revenue_growth_y4">Revenue Growth Year 4 (%):</label>
+                    <input type="number" id="revenue_growth_y4" value="5" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="5" style="display: none;">
+                    <label for="revenue_growth_y5">Revenue Growth Year 5 (and thereafter) (%):</label>
+                    <input type="number" id="revenue_growth_y5" value="4" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="6" style="display: none;">
+                    <label for="revenue_growth_y6">Revenue Growth Year 6 (%):</label>
+                    <input type="number" id="revenue_growth_y6" value="4" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="7" style="display: none;">
+                    <label for="revenue_growth_y7">Revenue Growth Year 7 (%):</label>
+                    <input type="number" id="revenue_growth_y7" value="4" step="0.1" required>
+                </div>
+                 <div class="input-group" data-year="8" style="display: none;">
+                    <label for="revenue_growth_y8">Revenue Growth Year 8 (%):</label>
+                    <input type="number" id="revenue_growth_y8" value="3" step="0.1" required>
+                </div>
+                 <div class="input-group" data-year="9" style="display: none;">
+                    <label for="revenue_growth_y9">Revenue Growth Year 9 (%):</label>
+                    <input type="number" id="revenue_growth_y9" value="3" step="0.1" required>
+                </div>
+                <div class="input-group" data-year="10" style="display: none;">
+                    <label for="revenue_growth_y10">Revenue Growth Year 10 (and thereafter) (%):</label>
+                    <input type="number" id="revenue_growth_y10" value="3" step="0.1" required>
+                </div>
             </div>
+            <!-- End of new section -->
 
             <div class="input-group">
                 <label for="cogs_pct">COGS as % of Revenue (%):</label>
@@ -52,7 +92,6 @@
                 <label for="fixed_opex">Fixed Operating Expenses:</label>
                 <input type="number" id="fixed_opex" value="100" step="0.01" required>
             </div>
-
             <div class="input-group">
                 <label for="initial_ppe">Initial PP&E (Year 0):</label>
                 <input type="number" id="initial_ppe" value="500" step="0.01" required>
@@ -70,29 +109,22 @@
                 <input type="number" id="tax_rate" value="25" step="0.1" required>
             </div>
 
-
             <h2>Working Capital Assumptions (in Days)</h2>
             <div class="input-group">
                 <label for="dso_days">Days Sales Outstanding (AR) (Days):
-                <span class="tooltip-trigger" title="Average number of days it takes for customers to pay their invoices (affects Accounts Receivable).">
-                ❓
-                </span>
+                    <span class="tooltip-trigger" title="Average number of days it takes for customers to pay their invoices.">❓</span>
                 </label>
                 <input type="number" id="dso_days" value="45" step="1" required>
             </div>
             <div class="input-group">
                 <label for="dio_days">Days Inventory Outstanding (Inventory) (Days):
-                <span class="tooltip-trigger" title="Average number of days inventory is held before it's sold (affects Inventory).">
-                ❓
-                </span>
+                    <span class="tooltip-trigger" title="Average number of days inventory is held before it's sold.">❓</span>
                 </label>
                 <input type="number" id="dio_days" value="30" step="1" required>
             </div>
             <div class="input-group">
                 <label for="dpo_days">Days Payable Outstanding (AP) (Days):
-                <span class="tooltip-trigger" title="Average number of days it takes the company to pay its suppliers (affects Accounts Payable).">
-                ❓
-                </span>
+                    <span class="tooltip-trigger" title="Average number of days it takes the company to pay its suppliers.">❓</span>
                 </label>
                 <input type="number" id="dpo_days" value="60" step="1" required>
             </div>
@@ -106,81 +138,37 @@
                 <label for="initial_debt">Initial Debt (Year 0):</label>
                 <input type="number" id="initial_debt" value="200" step="0.01" required>
             </div>
-            
             <div class="input-group">
                 <label for="annual_debt_repayment">Annual Debt Repayment:</label>
                 <input type="number" id="annual_debt_repayment" value="50" step="0.01" required>
             </div>
-            
             <div class="input-group">
                 <label for="interest_rate">Interest Rate (%):</label>
                 <input type="number" id="interest_rate" value="5" step="0.1" required>
             </div>
-
-            
 
             <button type="submit" id="calculateBtn">Calculate Forecast</button>
             <p id="error-message" class="error-message"></p>
         </form>
 
         <div id="results-container" style="display: none;">
-            <p id="error-message" class="error-message"></p>
+            <!-- Results tables and charts will be populated here -->
             <h2>Forecasted Income Statement</h2>
-            <table id="incomeStatementTable">
-                <thead>
-                        <th>Line Item</th>
-                        <th>Year 1</th>
-                        <th>Year 2</th>
-                        <th>Year 3</th>
-                </thead>
-                <tbody>
-                    </tbody>
-            </table>
-            
-            <h2>Forecasted Balance Sheet Items</h2>
-            <table id="balanceSheetTable">
-                <thead>
-                    <tr>
-                        <th>Line Item</th>
-                        <th>Year 0</th> 
-                        <th>Year 1</th>
-                        <th>Year 2</th>
-                        <th>Year 3</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-
+            <table id="incomeStatementTable"><thead></thead><tbody></tbody></table>
+            <h2>Forecasted Balance Sheet</h2>
+            <table id="balanceSheetTable"><thead></thead><tbody></tbody></table>
             <h2>Forecasted Cash Flow Statement</h2>
-            <table id="cashFlowTable">
-                <thead>
-                        <th>Line Item</th>
-                        <th>Year 1</th>
-                        <th>Year 2</th>
-                        <th>Year 3</th>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
+            <table id="cashFlowTable"><thead></thead><tbody></tbody></table>
             <button id="exportBtn" style="background-color: #1e6f5c; margin-top: 20px;">Export to Excel</button>
             <h2>Forecasted KPIs - Visual Trends</h2>
             <div style="width: 100%; margin: 20px auto; display: flex; flex-wrap: wrap; justify-content: space-around;">
-                
-                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
-                    <canvas id="revenueKpiChart"></canvas>
-                </div>
-                
-                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;">
-                    <canvas id="cashDebtChart"></canvas>
-                </div>
-                
-            </div> <!-- Closes the chart flex container -->
-        </div> <!-- Closes the results-container -->
-    </div> <!-- Closes the main container -->
+                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;"><canvas id="revenueKpiChart"></canvas></div>
+                <div style="width: 48%; min-width: 350px; margin-bottom: 20px;"><canvas id="cashDebtChart"></canvas></div>
+            </div>
+        </div>
+    </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="script.js"></script>
-    
 </body>
 </html>
