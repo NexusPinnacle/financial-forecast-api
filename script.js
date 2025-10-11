@@ -1,9 +1,8 @@
-// script.js
-
-// URL for your Flask API running locally
-// *** REMEMBER TO UPDATE THIS URL WHEN YOU DEPLOY! ***
+// API URLs
 const API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/forecast'; 
 const EXPORT_API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/export'; 
+
+// DOM Elements
 const form = document.getElementById('forecastForm');
 const resultsContainer = document.getElementById('results-container');
 const incomeStatementBody = document.querySelector('#incomeStatementTable tbody');
@@ -12,541 +11,306 @@ const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
+const revenueGrowthContainer = document.getElementById('revenue-growth-container');
 
-
-// ----------------------------------------------------
-// NEW: LOGIC TO HANDLE YEAR BUTTON CLICKS
-// ----------------------------------------------------
-yearButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        // 1. Remove 'selected' class from all buttons
-        yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
-        
-        // 2. Add 'selected' class to the clicked button
-        button.classList.add('selected-year-btn');
-        
-        // 3. Update the hidden input value
-        const newYears = button.getAttribute('data-years');
-        forecastYearsInput.value = newYears;
-        
-        // Optional: Clear results if forecast length changes
-        // document.getElementById('results-container').innerHTML = '';
-    });
-});
-// ----------------------------------------------------
-
-
-// Global variable to hold the chart instance
+// Chart instances
 let revenueChart = null;
 let cashDebtChart = null;
 
+/**
+ * NEW: Shows/hides year-specific revenue growth inputs based on selected forecast duration.
+ * Also updates the label of the last visible input to say "(and thereafter)".
+ * @param {number} yearsToShow - The number of years to show inputs for (3, 5, or 10).
+ */
+function updateRevenueGrowthInputs(yearsToShow) {
+    const allGrowthInputs = revenueGrowthContainer.querySelectorAll('.input-group');
+    
+    allGrowthInputs.forEach(inputDiv => {
+        const year = parseInt(inputDiv.dataset.year, 10);
+        const label = inputDiv.querySelector('label');
+        
+        // Reset label text first
+        label.textContent = `Revenue Growth Year ${year} (%):`;
+        
+        if (year <= yearsToShow) {
+            inputDiv.style.display = 'flex'; // Show the input
+            if (year === yearsToShow) {
+                // Add "(and thereafter)" to the last visible input's label
+                label.textContent = `Revenue Growth Year ${year} (and thereafter) (%):`;
+            }
+        } else {
+            inputDiv.style.display = 'none'; // Hide the input
+        }
+    });
+}
 
+// --- Event Listeners ---
+
+// Handle clicks on 3, 5, 10 year duration buttons
+yearButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
+        button.classList.add('selected-year-btn');
+        
+        const newYears = button.getAttribute('data-years');
+        forecastYearsInput.value = newYears;
+        
+        // Call the new function to update the UI
+        updateRevenueGrowthInputs(parseInt(newYears, 10));
+    });
+});
+
+// Main form submission for calculation
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    errorMessage.textContent = '';
-    const data = {};
-    // Default currency in case the input is not found (safe fallback)
-    let currencySymbol = document.getElementById('currency_symbol')?.value || '$';
-
-    try {
-        // 1. Gather all inputs and convert values
-        
-        // Non-percentage inputs
-        data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-        data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
-        data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
-        data.capex = parseFloat(document.getElementById('capex').value);
-
-        // Days & Initial Balance Inputs
-        data.dso_days = parseFloat(document.getElementById('dso_days').value);
-        data.dio_days = parseFloat(document.getElementById('dio_days').value);
-        data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
-        data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
-        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value); // <-- ADD THIS LINE
-        
-        
-        // Percentage inputs
-        data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
-        data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
-        data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
-        data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
-        data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
-
-        
-        // CRITICAL CHECK: Ensure no field is NaN
-        for (const key in data) {
-            if (isNaN(data[key])) {
-                throw new Error(`Invalid value for ${key}.`);
-            }
-        }
-
-
-        // Append the selected number of years to the data object
-        data.years = parseInt(forecastYearsInput.value, 10);
-
-        
-        // 2. Call the Python Backend API 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-        
-        // 3. Handle the API Response
-        const result = await response.json();
-        
-        if (!response.ok) {
-            errorMessage.textContent = `API Error: ${result.error || response.statusText}`;
-            resultsContainer.style.display = 'none';
-            return;
-        }
-
-        // 4. Display the results - PASS THE CURRENCY SYMBOL   
-        renderResults(result, currencySymbol);
-
-
-        
-    } catch (error) {
-        // Consolidated error handling for all try blocks
-        console.error("Client-side error:", error);
-        
-        if (error.message.includes('Invalid value')) {
-            errorMessage.textContent = 'Please enter valid numerical data for all fields.';
-        } else if (error.message.includes('fetch')) {
-             errorMessage.textContent = 'Network error: Could not connect to the backend server. Is your Python app running?';
-        } else {
-             errorMessage.textContent = `An unexpected error occurred: ${error.message}`;
-        }
-        resultsContainer.style.display = 'none';
-    }
+    await handleForecastRequest(API_URL);
 });
 
-
-
-
-const exportBtn = document.getElementById('exportBtn');
-
-exportBtn.addEventListener('click', async () => {
-    // Prevent default form action, although it's a button, good practice
-    // Collect all input data, similar to the main submission
-    const data = {};
-    let allInputsValid = true;
-    const errorMessage = document.getElementById('error-message'); // Ensure error message element is accessible
-
-    try {
-        // Collect all input values (Same logic as the main form submission)
-        // Non-percentage inputs
-        data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-        data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
-        data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
-        data.capex = parseFloat(document.getElementById('capex').value);
-
-        // Days & Initial Balance Inputs
-        data.dso_days = parseFloat(document.getElementById('dso_days').value);
-        data.dio_days = parseFloat(document.getElementById('dio_days').value);
-        data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
-        data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
-        data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-        data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
-        
-        // Percentage inputs (converted to decimal for backend)
-        data.revenue_growth = parseFloat(document.getElementById('revenue_growth').value) / 100;
-        data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
-        data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
-        data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
-        data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
-
-        // CRITICAL CHECK: Ensure no required field is NaN
-        for (const key in data) {
-             // Only check for fields that are typically not zeroed out by default, but check for NaN across the board
-             // A quick check that relies on the user running the forecast first
-            if (isNaN(data[key])) {
-                allInputsValid = false;
-                break;
-            }
-        }
-
-        if (!allInputsValid) {
-            errorMessage.textContent = 'Please run the forecast and ensure all fields have valid numbers before exporting.';
-            return;
-        }
-        
-        errorMessage.textContent = 'Generating Excel file... This may take a moment.';
-        
-        data.years = parseInt(forecastYearsInput.value, 10); 
-        
-        // 2. Call the new Python Backend Export API
-        const response = await fetch(EXPORT_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-
-        // 3. Handle the file download response
-        if (response.ok) {
-            errorMessage.textContent = 'Excel file downloaded successfully.';
-            
-            // Get the suggested filename from the backend's header
-            const disposition = response.headers.get('Content-Disposition');
-            let filename = 'Financial_Forecast.xlsx';
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    // Remove quotes from filename if present
-                    filename = matches[1].replace(/['"]/g, '');
-                }
-            }
-
-            // Create a temporary link element to trigger the download
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename; 
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-        } else {
-            // Read the error message if the response is not a file
-            const errorText = await response.text();
-            errorMessage.textContent = `Export Error: ${errorText || response.statusText}`;
-        }
-
-    } catch (error) {
-        console.error("Export error:", error);
-        errorMessage.textContent = `An unexpected export error occurred: ${error.message}`;
-    }
+// Export button click
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    await handleForecastRequest(EXPORT_API_URL, true);
 });
-
-
-
-
-
 
 /**
- * Takes the JSON data from the backend and renders it into the HTML tables.
- * @param {object} data - The forecast results from the backend.
- * @param {string} currencySymbol - The selected currency symbol (e.g., '$', '€', '£').
+ * Universal handler for both calculation and export requests.
+ * @param {string} url - The API endpoint to call.
+ * @param {boolean} isExport - Flag to determine if the request is for an Excel export.
+ */
+async function handleForecastRequest(url, isExport = false) {
+    errorMessage.textContent = isExport ? 'Generating Excel file...' : '';
+    
+    try {
+        const data = collectInputData();
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `API Error: ${response.statusText}`);
+        }
+
+        if (isExport) {
+            await handleFileDownload(response);
+        } else {
+            const result = await response.json();
+            renderResults(result, document.getElementById('currency_symbol')?.value || '$');
+        }
+
+    } catch (error) {
+        console.error("Client-side error:", error);
+        errorMessage.textContent = `Error: ${error.message}`;
+        if (!isExport) {
+            resultsContainer.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Gathers all data from the form inputs.
+ * @returns {object} The data object ready to be sent to the API.
+ */
+function collectInputData() {
+    const data = {};
+    const years = parseInt(forecastYearsInput.value, 10);
+    
+    // --- NEW: Collect year-specific revenue growth rates ---
+    data.revenue_growth_rates = [];
+    for (let i = 1; i <= years; i++) {
+        const value = parseFloat(document.getElementById(`revenue_growth_y${i}`).value) / 100;
+        data.revenue_growth_rates.push(value);
+    }
+
+    // Collect other inputs
+    data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
+    data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
+    data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
+    data.capex = parseFloat(document.getElementById('capex').value);
+    data.dso_days = parseFloat(document.getElementById('dso_days').value);
+    data.dio_days = parseFloat(document.getElementById('dio_days').value);
+    data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
+    data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+    data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+    data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
+    data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
+    data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
+    data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
+    data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+    data.years = years;
+
+    // Validate all collected data
+    for (const key in data) {
+        const value = data[key];
+        if (Array.isArray(value)) {
+            if (value.some(isNaN)) throw new Error(`Invalid value for ${key}.`);
+        } else {
+            if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
+        }
+    }
+    
+    return data;
+}
+
+/**
+ * Handles the logic for triggering a file download from a response.
+ * @param {Response} response The fetch response object.
+ */
+async function handleFileDownload(response) {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'Financial_Forecast.xlsx'; 
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    errorMessage.textContent = 'Excel file downloaded successfully.';
+}
+
+/**
+ * Renders the forecast results into HTML tables and charts.
+ * @param {object} data The forecast results from the backend.
+ * @param {string} currencySymbol The selected currency symbol.
  */
 function renderResults(data, currencySymbol) {
-    // Clear previous results
-    incomeStatementBody.innerHTML = '';
-    balanceSheetBody.innerHTML = '';
-    cashFlowBody.innerHTML = ''; 
+    [incomeStatementBody, balanceSheetBody, cashFlowBody].forEach(body => body.innerHTML = '');
 
-    // Helper function to format numbers using the selected currencySymbol
-    const format = (value) => {
-        const sign = value < 0 ? '-' : '';
-        const absoluteValue = Math.abs(value);
-        
-        // Use the dynamic currencySymbol
-        return sign + currencySymbol + absoluteValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    };
+    const format = (value) => `${value < 0 ? '-' : ''}${currencySymbol}${Math.abs(value).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
-    // The full range of years (e.g., [0, 1, 2, 3] or [0, 1, 2, 3, 4, 5])
     const allYears = data["Years"]; 
-    
-    // Years for Income Statement (IS) and Cash Flow Statement (CFS): [1, 2, 3...]
     const is_cfs_years = allYears.slice(1); 
-    
-    // Years for Balance Sheet (BS): [0, 1, 2, 3...]
     const bs_years = allYears; 
-
-// ----------------------------------------------------
-    // DYNAMICALLY CREATE TABLE HEADERS (Correct as is)
-// ----------------------------------------------------
     
+    // Dynamically create table headers
     const tableConfigs = [
-        { id: 'incomeStatementTable', years: is_cfs_years, body: incomeStatementBody },
-        { id: 'balanceSheetTable', years: bs_years, body: balanceSheetBody }, 
-        { id: 'cashFlowTable', years: is_cfs_years, body: cashFlowBody } 
+        { id: 'incomeStatementTable', years: is_cfs_years },
+        { id: 'balanceSheetTable', years: bs_years },
+        { id: 'cashFlowTable', years: is_cfs_years } 
     ];
 
     tableConfigs.forEach(config => {
-        const table = document.getElementById(config.id);
-        const thead = table.querySelector('thead');
-        
-        // 1. Clear existing header
+        const thead = document.querySelector(`#${config.id} thead`);
         thead.innerHTML = ''; 
-        
-        // 2. Create the new row
         const headerRow = thead.insertRow();
-        const headerCell = document.createElement('th');
-        headerCell.textContent = 'Line Item';
-        headerRow.appendChild(headerCell);
-
-        // 3. Add year headers dynamically
-        config.years.forEach(year => { 
-            const yearCell = document.createElement('th');
-            if (config.id === 'balanceSheetTable' && year === 0) {
-                yearCell.textContent = 'Year 0 (Initial)';
-            } else {
-                yearCell.textContent = `Year ${year}`;
-            }
-            headerRow.appendChild(yearCell);
+        headerRow.insertCell().textContent = 'Line Item';
+        config.years.forEach(year => {
+            const cell = headerRow.insertCell();
+            cell.textContent = (config.id === 'balanceSheetTable' && year === 0) ? 'Year 0 (Initial)' : `Year ${year}`;
         });
-        
     });
 
-// --- RENDER DATA ROWS: CRITICAL MISSING HELPER FUNCTION (Correct as is) ---
-    /**
-     * Inserts a single row of data into the specified table body.
-     * @param {object} config - Configuration object for the row.
-     */
     const insertDataRow = (config) => {
         const row = config.tableBody.insertRow();
-
-        if (config.customClass) {
-            row.className = config.customClass;
-        }
+        if (config.customClass) row.className = config.customClass;
+        if (config.isBold) row.style.fontWeight = 'bold';
+        row.insertCell().textContent = config.label;
         
-        if (config.isBold) {
-            row.style.fontWeight = 'bold';
-        }
-
-        const labelCell = row.insertCell();
-        labelCell.textContent = config.label;
-        labelCell.classList.add('line-item-cell');
-
-        let rowData = [];
-        let yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
-        
-if (config.dataKey) {
-    // CRITICAL FIX: Use the OR operator (||) to default to an empty array if the key is undefined.
-    rowData = data[config.dataKey] || [];
-} else if (config.calculation) {
-    // Data is calculated client-side
-    rowData = config.calculation(data);
-} else {
-    // Fallback for missing dataKey/calculation 
-    rowData = [];
-}
-
-        // Slice the data array starting from the specified index (startIdx)
+        let rowData = config.dataKey ? (data[config.dataKey] || []) : config.calculation(data);
+        const yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
         const slicedData = rowData.slice(config.startIdx);
         
-        // Ensure we iterate exactly for the number of columns (years) expected for the table
-        yearsToRender.forEach((year, index) => {
+        yearsToRender.forEach((_, index) => {
             const value = slicedData[index];
             const cell = row.insertCell();
-            
-            if (typeof value === 'number' && !isNaN(value)) {
-                const finalValue = config.isReversed ? -value : value;
-                cell.textContent = format(finalValue);
-            } else {
-                cell.textContent = '-'; 
-            }
+            cell.textContent = (typeof value === 'number') ? format(config.isReversed ? -value : value) : '-';
             cell.classList.add('data-cell');
         });
     };
     
-    // --- RENDER INCOME STATEMENT / BALANCE SHEET / CASH FLOW ---
-    
+    // Data definitions for rendering tables
     const forecastData = [
-        // Income Statement (PL) - Data starts from index 1 (Year 1)
-        { label: "Revenue", customClass: 'heavy-total-row', dataKey: "Revenue", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        // Income Statement
+        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Gross Profit", customClass: 'heavy-total-row', dataKey: "Gross Profit", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
         { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBIT", customClass: 'heavy-total-row', dataKey: "EBIT", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true },
         { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBT", customClass: 'heavy-total-row', dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
-        { label: "Net Income", customClass: 'heavy-total-row', dataKey: "Net Income", tableBody: incomeStatementBody, isBold: true, startIdx: 1 },
+        { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
 
-        // Balance Sheet (BS) - Data starts from index 0 (Year 0)
+        // Balance Sheet
         { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Net PP&E", dataKey: "Closing PP&E", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Total Assets", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
-          calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), 
-          startIdx: 0 
-        },
+        { label: "Total Assets", calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
         { label: "Accounts Payable", dataKey: "Closing AP", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
         { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Total Liabilities & Equity", customClass: 'heavy-total-row', tableBody: balanceSheetBody, isTotal: true, 
-          calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), 
-          startIdx: 0 
-        },
+        { label: "Total Liabilities & Equity", calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
 
-        // Cash Flow Statement (CFS) - Data starts from index 1 (Year 1)
+        // Cash Flow Statement
         { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
-        
-        // *** FIX 1: Correct indexing for CFO calculation ***
-        { label: "Cash Flow from Operations", customClass: 'heavy-total-row', tableBody: cashFlowBody, isBold: true, 
-          // ❌ REMOVE dataKey: "CFO"
-          calculation: (d) => {
-              const start = 1;
-              const netIncome = d["Net Income"].slice(start);
-              const depreciation = d["Depreciation"].slice(start);
-              const nwc = d["Change in NWC"].slice(start);
-              return netIncome.map((val, i) => val + depreciation[i] - nwc[i]); 
-          },
-          startIdx: 0 // This is correct, as the calculation returns the final, sliced array
-        },
-        
-        // *** FIX 2: Correct indexing for CapEx calculation ***
-        { label: "Cash Flow from Investing (CapEx)", customClass: 'heavy-total-row', tableBody: cashFlowBody, isBold: true, 
-          // ❌ REMOVE dataKey: "CapEx"
-          calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)),
-          startIdx: 0 // This is correct
-        },
-        
-        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
-        { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, customClass: 'heavy-total-row', isBold: true, startIdx: 1 },
-        
+        { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true },
+        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true },
+        { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
     ];
-
-    // This is the line that makes the table rendering work!
+    
     forecastData.forEach(insertDataRow); 
     
-    // Call the chart function
     renderCharts(data);
-    
-    // Show the results section
     resultsContainer.style.display = 'block';
-
 }
 
-// New function to handle Chart.js rendering (REPLACE THE EXISTING renderCharts FUNCTION)
+/**
+ * Renders/updates the charts with new forecast data.
+ * @param {object} data The forecast results from the backend.
+ */
 function renderCharts(data) {
-    const years = data["Years"].slice(1).map(y => `Year ${y}`); // Use Year 1, 2, 3 for x-axis
+    const years = data["Years"].slice(1).map(y => `Year ${y}`);
+    const ebitPct = data["Revenue"].slice(1).map((rev, i) => rev === 0 ? 0 : (data["EBIT"].slice(1)[i] / rev) * 100);
 
-    // --- 1. Calculate the required KPI for the line chart (EBIT %) ---
-    const ebitPct = [];
-    // Start at i=1 to skip Year 0
-    for (let i = 1; i < data["EBIT"].length; i++) {
-        // EBIT% = EBIT / Revenue
-        const revenue = data["Revenue"][i];
-        const ebit = data["EBIT"][i];
-        // Calculate percentage, default to 0 if revenue is zero
-        const pct = revenue === 0 ? 0 : ebit / revenue;
-        ebitPct.push(pct * 100); // Convert to percentage
-    }
-
-    // --- CHART 1: REVENUE, NET INCOME (Bars) and EBIT % (Line) ---
-    // NOTE: This assumes you use the new canvas ID: 'revenueKpiChart'
-    const ctx1 = document.getElementById('revenueKpiChart').getContext('2d');
-
-    // Destroy the old instance if it exists
-    if (revenueChart) {
-        revenueChart.destroy();
-    }
-
-    revenueChart = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [
-                {
-                    label: 'Revenue',
-                    data: data["Revenue"].slice(1), 
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue Bar
-                    yAxisID: 'y'
-                },
-                {
-                    label: 'Net Income',
-                    data: data["Net Income"].slice(1), 
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green Bar
-                    yAxisID: 'y'
-                },
-                {
-                    type: 'line', // Mixed type
-                    label: 'EBIT % (Line)',
-                    data: ebitPct, 
-                    borderColor: 'rgb(255, 99, 132)', // Red Line
-                    borderWidth: 3,
-                    fill: false,
-                    yAxisID: 'y1' // Use secondary Y-axis for percentage
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: { display: true, text: 'Amount' }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: { drawOnChartArea: false }, // Only draw the grid for the primary axis
-                    title: { display: true, text: 'Percentage (%)' },
-                    min: 0,
-                    // Dynamic max setting for a nice scale
-                    max: Math.max(100, ...ebitPct.filter(val => !isNaN(val))) > 0 ? Math.ceil(Math.max(100, ...ebitPct.filter(val => !isNaN(val))) / 10) * 10 : 100 
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Profitability Trends (Revenue, Net Income, EBIT %)'
-                }
-            }
+    const chartConfigs = [{
+        chartVar: 'revenueChart', canvasId: 'revenueKpiChart', config: {
+            type: 'bar',
+            data: { labels: years, datasets: [
+                { label: 'Revenue', data: data["Revenue"].slice(1), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
+                { label: 'Net Income', data: data["Net Income"].slice(1), backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'y' },
+                { type: 'line', label: 'EBIT %', data: ebitPct, borderColor: 'rgb(255, 99, 132)', borderWidth: 3, fill: false, yAxisID: 'y1' }
+            ]},
+            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: {
+                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Amount' } },
+                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentage (%)' } }
+            }, plugins: { title: { display: true, text: 'Profitability Trends' } } }
         }
+    }, {
+        chartVar: 'cashDebtChart', canvasId: 'cashDebtChart', config: {
+            type: 'bar',
+            data: { labels: years, datasets: [
+                { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
+                { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+            ]},
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
+        }
+    }];
+
+    // Using a map to hold chart instances { 'revenueChart': chartInstance }
+    const charts = { revenueChart, cashDebtChart };
+
+    chartConfigs.forEach(cfg => {
+        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
+        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
     });
 
-    // --- CHART 2: CASH and DEBT (Bar Chart) ---
-    // NOTE: This assumes you use the new canvas ID: 'cashDebtChart'
-    const ctx2 = document.getElementById('cashDebtChart').getContext('2d');
-
-    // Destroy the old instance if it exists
-    if (cashDebtChart) {
-        cashDebtChart.destroy();
-    }
-
-    cashDebtChart = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [
-                {
-                    label: 'Closing Cash',
-                    data: data["Closing Cash"].slice(1), 
-                    backgroundColor: 'rgba(255, 159, 64, 0.7)' // Orange Bar
-                },
-                {
-                    label: 'Closing Debt',
-                    data: data["Closing Debt"].slice(1), 
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)' // Red Bar
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: { stacked: false },
-                y: { stacked: false, beginAtZero: true }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Liquidity & Capital Structure (Cash vs. Debt)'
-                }
-            }
-        }
-    });
+    // Re-assign global variables
+    revenueChart = charts.revenueChart;
+    cashDebtChart = charts.cashDebtChart;
 }
+
+
+// --- Initial Setup ---
+// Set the initial visibility of revenue growth inputs when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    updateRevenueGrowthInputs(3); // Default to 3 years
+});
