@@ -34,7 +34,7 @@ label {
     font-weight: bold;
 }
 
-input[type="number"] {
+input[type="number"], select {
     flex-basis: 35%;
     padding: 8px;
     border: 1px solid #ccc;
@@ -50,128 +50,22 @@ button {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
-    width: 100%;
-    margin-top: 20px;
     transition: background-color 0.3s;
+    width: 100%; /* Default to full width for main buttons */
 }
 
 button:hover {
-    background-color: #218838;
+    background-color: #00568c;
 }
 
-/* Table Styling for Results */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    margin-bottom: 30px;
-}
-
-th, td {
-    border: 1px solid #ddd;
-    padding: 10px;
-    text-align: right; /* Financials are usually right-aligned */
-}
-
-/* Original rule replaced/modified: */
-th:first-child {
-    text-align: left;
-    font-weight: bold; /* Keep the 'Line Item' header bold */
-}
-
-td:first-child {
-    text-align: left;
-    font-weight: normal; /* Default all labels to normal (non-bold) */
-}
-
-/* These rules must be present to make the selected lines bold */
-.is-bold-row td, .heavy-total-row td {
-    font-weight: bold;
-}
-
-thead th {
-    background-color: #e9ecef;
-    color: #495057;
-}
-
-.error-message {
-    color: red;
-    font-weight: bold;
-    margin-top: 10px;
-}
-
-/* style.css */
-
-/* ... (Existing styles above) ... */
-
-/* New rule to make bold line items stand out */
-.is-bold-row td {
-    font-weight: bold;
-}
-
-/* style.css */
-
-/* ... (Existing styles above) ... */
-
-/* Rule to ensure the heavy total rows on the Balance Sheet are bold */
-.heavy-total-row td {
-    font-weight: bold;
-}
-
-/* style.css */
-
-/* Add styling for the select dropdown to match number inputs */
-select {
-    /* Match the width of input[type="number"] */
-    flex-basis: 35%;
-    /* Match padding and borders */
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    /* Ensure height consistency */
-    text-align: right;
-
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-color: white; /* Ensure background is white */
-}
-
-/* style.css */
-
-/* Tooltip Trigger Styling */
-.tooltip-trigger {
-    /* Make it look clickable/informational */
-    cursor: help; 
-    color: #007bff; /* Blue color */
-    font-size: 0.9em;
-    font-weight: normal;
-    
-    /* Ensure it aligns well with the label text */
-    margin-left: 5px;
-}
-
-/* Optional: Subtle hover effect */
-.tooltip-trigger:hover {
-    color: #0056b3;
-}
-
-/* You can also add more advanced styles to the label itself if you want to control the text wrapping */
-label {
-    /* Ensures the label has space for the question mark */
-    display: inline-flex;
-    align-items: center; 
-}
-
+/* Year selection buttons (smaller, inline) */
 .year-select-btn {
-    /* Inherit base button style, but make it smaller/less aggressive */
-    padding: 8px 15px; 
-    background-color: #f0f0f0; 
+    width: auto;
+    padding: 8px 15px;
+    background-color: #f0f0f0;
     color: #333;
     border: 1px solid #ccc;
-    font-weight: normal;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
+    font-size: 14px;
 }
 
 .year-select-btn:hover {
@@ -186,7 +80,7 @@ label {
     border-color: #3b84f5;
 }
 
-/* --- NEW: Two-Pane Layout for Inputs --- */
+/* --- Two-Pane Layout for Inputs --- */
 .input-layout {
     display: flex; /* Use flexbox for the two panes */
     gap: 40px;
@@ -206,38 +100,112 @@ label {
     min-width: 45%;
 }
 
-/* Ensure sub-sections in the right pane have proper spacing */
+/* Granular Section Spacing */
 .granular-section {
-    margin-bottom: 30px;
-    padding-bottom: 10px;
-    border-bottom: 1px dashed #ddd;
-}
-
-.granular-section:last-child {
-    border-bottom: none;
+    margin-bottom: 10px; /* Reduced margin to improve compactness */
 }
 
 /* Adjust button to span the full width of the main container again */
 #calculateBtn, #exportBtn {
     width: calc(100% - 60px); /* 100% of max-width - padding on container */
     max-width: 900px;
-    margin-left: auto;
-    margin-right: auto;
-    display: block; /* Center the button */
 }
 
-/* Media query for smaller screens: stack the panes vertically */
-@media (max-width: 950px) {
-    .input-layout {
-        flex-direction: column;
-    }
-    .left-pane {
-        padding-right: 0;
-        border-right: none;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 20px;
-    }
-    .right-pane {
-        margin-top: 20px;
-    }
+.error-message {
+    color: #dc3545;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+/* Results Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: right;
+}
+
+th:first-child, td:first-child {
+    text-align: left;
+    background-color: #f7f7f7;
+    font-weight: bold;
+}
+
+thead th {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.heavy-total-row {
+    border-top: 2px solid #000;
+}
+
+.data-cell {
+    font-family: 'Courier New', monospace; /* Use monospaced font for numbers */
+}
+
+/* Tooltip Styling */
+.tooltip-trigger {
+    cursor: help;
+    color: #3b84f5;
+    margin-left: 5px;
+}
+
+/* --- NEW COLLAPSE/EXPAND STYLES --- */
+.collapsible-header {
+    cursor: pointer;
+    background-color: #f7f7f7;
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    font-size: 1.1em;
+    font-weight: normal; /* Override h4 default bold */
+}
+
+.collapsible-header:hover {
+    background-color: #eee;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    font-weight: bold;
+}
+
+/* Rotate icon when the header is not collapsed */
+.collapsible-header:not(.collapsed) .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+    padding: 0 10px;
+    border: 1px solid #ddd;
+    border-top: none;
+}
+
+.collapsible-content.expanded-content {
+    /* Set max-height large enough to hold all content (e.g., 10 * 15px height + padding) */
+    max-height: 500px; 
+    padding-bottom: 15px; 
+}
+
+/* Re-ensure standard vertical input group styling within the collapsible content */
+.collapsible-content .input-group {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    align-items: center;
 }
