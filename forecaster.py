@@ -5,8 +5,8 @@ DAYS = 365 # Constant for converting days to percentage of a year
 
 def generate_forecast(
     initial_revenue,
-    revenue_growth_rates, # CHANGED: from revenue_growth to revenue_growth_rates (list)
-    cogs_pct,
+    revenue_growth_rates, 
+    cogs_pct_rates, # MODIFIED: Now accepts a list of rates
     fixed_opex,
     tax_rate,
     initial_ppe,
@@ -59,10 +59,11 @@ def generate_forecast(
     debt_closing[0] = initial_debt
     cash_closing[0] = initial_cash
     
-    # Calculate Year 0 NWC Accounts
+    # Calculate Year 0 NWC Accounts (Uses the Year 1 COGS rate for base case NWC)
+    cogs_0 = initial_revenue * cogs_pct_rates[0] # NEW: Calculate cogs_0 using first rate
     ar_closing[0] = initial_revenue * (dso_days / DAYS)
-    inventory_closing[0] = (initial_revenue * cogs_pct) * (dio_days / DAYS)
-    ap_closing[0] = (initial_revenue * cogs_pct) * (dpo_days / DAYS)
+    inventory_closing[0] = cogs_0 * (dio_days / DAYS) # MODIFIED to use cogs_0
+    ap_closing[0] = cogs_0 * (dpo_days / DAYS) # MODIFIED to use cogs_0
 
     # Calculate Retained Earnings (The Year 0 Balancing Plug)
     total_assets_0 = cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]
@@ -84,7 +85,10 @@ def generate_forecast(
 
         revenue[i] = revenue[i-1] * (1 + current_growth_rate)
         
-        cogs[i] = revenue[i] * cogs_pct
+        # NEW LOGIC: Use the year-specific COGS rate
+        cogs_rate_index = min(i - 1, len(cogs_pct_rates) - 1)
+        current_cogs_pct = cogs_pct_rates[cogs_rate_index] # NEW
+        cogs[i] = revenue[i] * current_cogs_pct # MODIFIED to use current_cogs_pct
         gross_profit[i] = revenue[i] - cogs[i] 
         
         interest_expense[i] = debt_closing[i-1] * interest_rate
