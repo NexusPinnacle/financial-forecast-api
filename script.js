@@ -11,12 +11,11 @@ const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
+// Granular assumption containers
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
 const cogsPctContainer = document.getElementById('cogs-pct-container');
-// Granular assumption containers
 const fixedOpexContainer = document.getElementById('fixed-opex-container');
 const capexContainer = document.getElementById('capex-container');
-// NEW WORKING CAPITAL CONTAINERS
 const dsoDaysContainer = document.getElementById('dso-days-container');
 const dioDaysContainer = document.getElementById('dio-days-container');
 const dpoDaysContainer = document.getElementById('dpo-days-container');
@@ -27,154 +26,86 @@ let revenueChart = null;
 let cashDebtChart = null;
 
 /**
- * Generates and populates year-specific Revenue Growth inputs.
+ * Creates and populates year-specific vertical inputs for a single category.
+ * @param {HTMLElement} container - The container element to populate.
+ * @param {string} idPrefix - The prefix for the input IDs (e.g., "revenue_growth").
+ * @param {string} labelBase - The base text for the input label (e.g., "Revenue Growth").
  * @param {number} years - The number of years to generate inputs for.
+ * @param {string} defaultValueId - The ID of the default input element.
+ * @param {string} step - The step attribute for the input (e.g., "0.1").
+ * @param {string} unit - The unit for the label (e.g., "(%)", "(Days)").
  */
-function createGranularRevenueInputs(years) {
-    revenueGrowthContainer.innerHTML = ''; // Clear previous inputs
+function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
+    container.innerHTML = ''; // Clear previous inputs
     
-    // Use the new default revenue growth value from the left pane
-    const defaultGrowth = parseFloat(document.getElementById('default_revenue_growth').value);
+    // Use the default value from the left pane
+    const defaultVal = parseFloat(document.getElementById(defaultValueId).value);
 
-    for (let i = 1; i <= 10; i++) { // Always generate up to 10 years, visibility handled by updateRevenueGrowthInputs
+    for (let i = 1; i <= years; i++) {
         const inputDiv = document.createElement('div');
         inputDiv.className = 'input-group';
-        inputDiv.dataset.year = i; // Store year for visibility control
         
-        const initialValue = defaultGrowth;
-        const labelText = `Revenue Growth Year ${i} (%):`;
-
-        inputDiv.innerHTML = `
-            <label for="revenue_growth_y${i}">${labelText}</label>
-            <input type="number" id="revenue_growth_y${i}" value="${initialValue}" step="0.1" required>
-        `;
-        revenueGrowthContainer.appendChild(inputDiv);
-    }
-    // Set initial visibility
-    updateRevenueGrowthInputs(years);
-}
-
-
-/**
- * Shows/hides year-specific revenue growth inputs based on selected forecast duration.
- * Also updates the label of the last visible input to say "(and thereafter)".
- * @param {number} yearsToShow - The number of years to show inputs for (3, 5, or 10).
- */
-function updateRevenueGrowthInputs(yearsToShow) {
-    const allGrowthInputs = revenueGrowthContainer.querySelectorAll('.input-group');
-    
-    allGrowthInputs.forEach(inputDiv => {
-        const year = parseInt(inputDiv.dataset.year, 10);
-        const label = inputDiv.querySelector('label');
+        const initialValue = defaultVal;
+        let labelText = `${labelBase} Year ${i} ${unit}:`;
         
-        // Reset label text first
-        label.textContent = `Revenue Growth Year ${year} (%):`;
-        
-        if (year <= yearsToShow) {
-            inputDiv.style.display = 'flex'; // Show the input
-            if (year === yearsToShow) {
-                // Add "(and thereafter)" to the last visible input's label
-                label.textContent = `Revenue Growth Year ${year} (and thereafter) (%):`;
-            }
-        } else {
-            inputDiv.style.display = 'none'; // Hide the input
+        // Special case for the last year's label (Revenue Growth only)
+        if (idPrefix === 'revenue_growth' && i === years && years < 10) {
+            labelText = `${labelBase} Year ${i} (and thereafter) ${unit}:`;
         }
-    });
-}
-
-/**
- * Generates and populates year-specific COGS inputs.
- * @param {number} years - The number of years to generate inputs for.
- */
-function createGranularCogsInputs(years) {
-    cogsPctContainer.innerHTML = ''; // Clear previous inputs
-    
-    // Use the default COGS value from the left pane
-    const defaultCogs = parseFloat(document.getElementById('default_cogs_pct').value);
-
-    for (let i = 1; i <= years; i++) {
-        const inputDiv = document.createElement('div');
-        inputDiv.className = 'input-group';
-        
-        const initialValue = defaultCogs;
-        
-        const labelText = `COGS Year ${i} (%):`;
 
         inputDiv.innerHTML = `
-            <label for="cogs_pct_y${i}">${labelText}</label>
-            <input type="number" id="cogs_pct_y${i}" value="${initialValue}" step="0.1" required>
+            <label for="${idPrefix}_y${i}">${labelText}</label>
+            <input type="number" id="${idPrefix}_y${i}" value="${initialValue}" step="${step}" required>
         `;
-        cogsPctContainer.appendChild(inputDiv);
+        container.appendChild(inputDiv);
     }
 }
 
 /**
- * Generates and populates year-specific inputs for Fixed Opex, CapEx, DSO, DIO, DPO, and Debt Repayment.
+ * Generates all granular inputs using the vertical list layout.
  * @param {number} years - The number of years to generate inputs for.
  */
-function createGranularInputs(years) {
-    // Clear all granular containers
-    fixedOpexContainer.innerHTML = '';
-    capexContainer.innerHTML = '';
-    dsoDaysContainer.innerHTML = ''; // NEW
-    dioDaysContainer.innerHTML = ''; // NEW
-    dpoDaysContainer.innerHTML = ''; // NEW
-    debtRepaymentContainer.innerHTML = '';
+function createAllGranularInputs(years) {
+    createVerticalInputs(revenueGrowthContainer, 'revenue_growth', 'Revenue Growth', years, 'default_revenue_growth', '0.1', '(%)');
+    createVerticalInputs(cogsPctContainer, 'cogs_pct', 'COGS as % of Revenue', years, 'default_cogs_pct', '0.1', '(%)');
+    createVerticalInputs(fixedOpexContainer, 'fixed_opex', 'Fixed Opex', years, 'default_fixed_opex', '0.01', '');
+    createVerticalInputs(capexContainer, 'capex', 'CapEx', years, 'default_capex', '0.01', '');
+    createVerticalInputs(dsoDaysContainer, 'dso_days', 'DSO', years, 'default_dso_days', '1', '(Days)');
+    createVerticalInputs(dioDaysContainer, 'dio_days', 'DIO', years, 'default_dio_days', '1', '(Days)');
+    createVerticalInputs(dpoDaysContainer, 'dpo_days', 'DPO', years, 'default_dpo_days', '1', '(Days)');
+    createVerticalInputs(debtRepaymentContainer, 'debt_repayment', 'Debt Repayment', years, 'default_annual_debt_repayment', '0.01', '');
+}
 
-    const defaultFixedOpex = parseFloat(document.getElementById('default_fixed_opex').value);
-    const defaultCapex = parseFloat(document.getElementById('default_capex').value);
-    const defaultDSO = parseFloat(document.getElementById('default_dso_days').value);
-    const defaultDIO = parseFloat(document.getElementById('default_dio_days').value);
-    const defaultDPO = parseFloat(document.getElementById('default_dpo_days').value);
-    const defaultDebtRepay = parseFloat(document.getElementById('default_annual_debt_repayment').value);
+/**
+ * Toggles the collapse/expand state of a granular section.
+ * @param {Event} e - The click event.
+ */
+function toggleCollapse(e) {
+    let header = e.target.closest('.collapsible-header');
+    if (!header) return;
 
-    for (let i = 1; i <= years; i++) {
-        // Fixed Opex
-        fixedOpexContainer.innerHTML += `
-            <div class="input-group">
-                <label for="fixed_opex_y${i}">Opex Year ${i}:</label>
-                <input type="number" id="fixed_opex_y${i}" value="${defaultFixedOpex}" step="0.01" required>
-            </div>`;
+    const targetId = header.getAttribute('data-target');
+    const content = document.getElementById(targetId);
 
-        // CapEx
-        capexContainer.innerHTML += `
-            <div class="input-group">
-                <label for="capex_y${i}">CapEx Year ${i}:</label>
-                <input type="number" id="capex_y${i}" value="${defaultCapex}" step="0.01" required>
-            </div>`;
-
-        // DSO (Accounts Receivable)
-        dsoDaysContainer.innerHTML += `
-            <div class="input-group">
-                <label for="dso_days_y${i}">DSO Year ${i}:</label>
-                <input type="number" id="dso_days_y${i}" value="${defaultDSO}" step="1" required>
-            </div>`;
+    if (content) {
+        // Toggle the 'collapsed' class on the header
+        header.classList.toggle('collapsed');
         
-        // DIO (Inventory)
-        dioDaysContainer.innerHTML += `
-            <div class="input-group">
-                <label for="dio_days_y${i}">DIO Year ${i}:</label>
-                <input type="number" id="dio_days_y${i}" value="${defaultDIO}" step="1" required>
-            </div>`;
-            
-        // DPO (Accounts Payable)
-        dpoDaysContainer.innerHTML += `
-            <div class="input-group">
-                <label for="dpo_days_y${i}">DPO Year ${i}:</label>
-                <input type="number" id="dpo_days_y${i}" value="${defaultDPO}" step="1" required>
-            </div>`;
-
-        // Debt Repayment
-        debtRepaymentContainer.innerHTML += `
-            <div class="input-group">
-                <label for="debt_repayment_y${i}">Repayment Year ${i}:</label>
-                <input type="number" id="debt_repayment_y${i}" value="${defaultDebtRepay}" step="0.01" required>
-            </div>`;
+        // Toggle the 'expanded-content' class on the content
+        content.classList.toggle('expanded-content');
+        
+        // To smooth out the collapse, we use max-height transition in CSS.
+        // If content is expanding, reset max-height to a large value, or use a calculated one.
+        // For simplicity with CSS transitions, we rely on the class toggle.
     }
 }
 
 
 // --- Event Listeners ---
+
+// Add listener to the right pane to handle all collapse clicks
+document.querySelector('.right-pane').addEventListener('click', toggleCollapse);
+
 
 // Handle clicks on 3, 5, 10 year duration buttons
 yearButtons.forEach(button => {
@@ -186,46 +117,35 @@ yearButtons.forEach(button => {
         forecastYearsInput.value = newYears;
         const yearsInt = parseInt(newYears, 10);
         
-        // Re-set visibility of revenue inputs and labels
-        updateRevenueGrowthInputs(yearsInt); 
-        // Regenerate all others to match the new horizon size
-        createGranularCogsInputs(yearsInt);
-        createGranularInputs(yearsInt); 
+        // Regenerate all inputs for the new horizon size
+        createAllGranularInputs(yearsInt); 
     });
 });
 
 // Event listeners to re-generate granular inputs if the default values change
 document.getElementById('default_revenue_growth').addEventListener('change', () => {
-    createGranularRevenueInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_cogs_pct').addEventListener('change', () => {
-    createGranularCogsInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_fixed_opex').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_capex').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
-// Event listeners for the three separate working capital defaults
 document.getElementById('default_dso_days').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_dio_days').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_dpo_days').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
-
 document.getElementById('default_annual_debt_repayment').addEventListener('change', () => {
-    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
 
 // Main form submission for calculation
@@ -317,8 +237,6 @@ function collectInputData() {
     data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
     data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
     data.capex_rates = collectList('capex', false, 'default_capex'); 
-    
-    // These still work as their IDs remain the same: dso_days_y1, dio_days_y1, etc.
     data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
     data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
     data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
@@ -483,7 +401,7 @@ function renderCharts(data) {
             data: { labels: years, datasets: [
                 { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
                 { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-            ]},
+            ]},\
             options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
         }
     }];
@@ -506,7 +424,5 @@ function renderCharts(data) {
 // Set the initial visibility of revenue growth inputs when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     const years = 3;
-    createGranularRevenueInputs(years); 
-    createGranularCogsInputs(years);
-    createGranularInputs(years);      
+    createAllGranularInputs(years);      
 });
