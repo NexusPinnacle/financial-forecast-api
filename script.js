@@ -12,9 +12,7 @@ const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
-// NEW: COGS container element
 const cogsPctContainer = document.getElementById('cogs-pct-container');
-// Granular assumption containers
 const fixedOpexContainer = document.getElementById('fixed-opex-container');
 const capexContainer = document.getElementById('capex-container');
 const workingCapitalContainer = document.getElementById('working-capital-container');
@@ -81,13 +79,12 @@ function updateRevenueGrowthInputs(yearsToShow) {
 }
 
 /**
- * NEW: Generates and populates year-specific COGS inputs.
+ * Generates and populates year-specific COGS inputs.
  * @param {number} years - The number of years to generate inputs for.
  */
 function createGranularCogsInputs(years) {
     cogsPctContainer.innerHTML = ''; // Clear previous inputs
     
-    // Use the default COGS value from the left pane
     const defaultCogs = parseFloat(document.getElementById('default_cogs_pct').value);
 
     for (let i = 1; i <= years; i++) {
@@ -95,7 +92,6 @@ function createGranularCogsInputs(years) {
         inputDiv.className = 'input-group';
         
         const initialValue = defaultCogs;
-        
         const labelText = `COGS Year ${i} (%):`;
 
         inputDiv.innerHTML = `
@@ -111,7 +107,6 @@ function createGranularCogsInputs(years) {
  * @param {number} years - The number of years to generate inputs for.
  */
 function createGranularInputs(years) {
-    // Note: Revenue inputs are now handled by createGranularRevenueInputs
     fixedOpexContainer.innerHTML = '';
     capexContainer.innerHTML = '';
     workingCapitalContainer.innerHTML = '';
@@ -182,15 +177,17 @@ yearButtons.forEach(button => {
         forecastYearsInput.value = newYears;
         const yearsInt = parseInt(newYears, 10);
         
-        updateRevenueGrowthInputs(yearsInt); // Re-set visibility and labels
-        // Need to regenerate all inputs if duration changes to ensure they reflect the new horizon size
+        // Re-set visibility of revenue inputs and labels
+        updateRevenueGrowthInputs(yearsInt); 
+        // Regenerate all others to match the new horizon size
         createGranularCogsInputs(yearsInt);
         createGranularInputs(yearsInt); 
     });
 });
 
-// NEW: Event listeners to re-generate granular inputs if the default values change
+// Event listeners to re-generate granular inputs if the default values change
 document.getElementById('default_revenue_growth').addEventListener('change', () => {
+    // Regenerate and reset visibility of revenue inputs
     createGranularRevenueInputs(parseInt(forecastYearsInput.value, 10));
 });
 
@@ -234,6 +231,76 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
 });
 
 /**
+ * Gathers all data from the form inputs.
+ * @returns {object} The data object ready to be sent to the API.
+ */
+function collectInputData() {
+    const data = {};
+    const years = parseInt(forecastYearsInput.value, 10);
+    
+    // Helper to collect granular data lists (FIXED to handle null/undefined inputs safely)
+    const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
+        const list = [];
+        const factor = isPercentage ? 100 : 1;
+        
+        let defaultValue = 0; 
+        
+        if (defaultValueId) {
+            const defaultElement = document.getElementById(defaultValueId);
+            if (defaultElement) {
+                defaultValue = parseFloat(defaultElement.value);
+            }
+        }
+
+        for (let i = 1; i <= years; i++) {
+            const input = document.getElementById(`${keyPrefix}_y${i}`);
+            
+            const value = parseFloat(input?.value);
+            
+            // If the input value is invalid (NaN or empty string), use the default value.
+            const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
+
+            list.push(finalValue / factor);
+        }
+        return list;
+    };
+    
+    // --- Collect all granular lists ---
+    data.revenue_growth_rates = collectList('revenue_growth', true, 'default_revenue_growth'); 
+    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
+    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
+    data.capex_rates = collectList('capex', false, 'default_capex'); 
+    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
+    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
+    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
+    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
+
+    // Collect other scalar inputs
+    data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
+    data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
+    data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+    data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+    data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
+    data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
+    data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+    data.years = years;
+
+    // Validate all collected data 
+    for (const key in data) {
+        const value = data[key];
+        if (Array.isArray(value)) {
+            if (value.some(isNaN)) throw new Error(`Invalid number in list for ${key}.`);
+        } else {
+            if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
+        }
+    }
+    
+    return data;
+}
+
+// ... (rest of the helper functions: handleForecastRequest, handleFileDownload, renderResults, renderCharts - they remain the same)
+
+/**
  * Universal handler for both calculation and export requests.
  * @param {string} url - The API endpoint to call.
  * @param {boolean} isExport - Flag to determine if the request is for an Excel export.
@@ -269,75 +336,6 @@ async function handleForecastRequest(url, isExport = false) {
             resultsContainer.style.display = 'none';
         }
     }
-}
-
-/**
- * Gathers all data from the form inputs.
- * @returns {object} The data object ready to be sent to the API.
- */
-function collectInputData() {
-    const data = {};
-    const years = parseInt(forecastYearsInput.value, 10);
-    
-    // Helper to collect granular data lists
-    const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
-        const list = [];
-        const factor = isPercentage ? 100 : 1;
-        
-        let defaultValue = 0; 
-        
-        if (defaultValueId) {
-            const defaultElement = document.getElementById(defaultValueId);
-            if (defaultElement) {
-                defaultValue = parseFloat(defaultElement.value);
-            }
-        }
-
-        for (let i = 1; i <= years; i++) {
-            const input = document.getElementById(`${keyPrefix}_y${i}`);
-            
-            const value = parseFloat(input?.value);
-            
-            // If the input value is invalid (NaN or empty string), use the default value.
-            const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
-
-            list.push(finalValue / factor);
-        }
-        return list;
-    };
-    
-    // --- Collect all granular lists ---
-    // Revenue Growth now uses the new default input
-    data.revenue_growth_rates = collectList('revenue_growth', true, 'default_revenue_growth'); 
-    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
-    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
-    data.capex_rates = collectList('capex', false, 'default_capex'); 
-    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
-    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
-    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
-    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
-
-    // Collect other scalar inputs
-    data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-    data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
-    data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
-    data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-    data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
-    data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
-    data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
-    data.years = years;
-
-    // Validate all collected data 
-    for (const key in data) {
-        const value = data[key];
-        if (Array.isArray(value)) {
-            if (value.some(isNaN)) throw new Error(`Invalid number in list for ${key}.`);
-        } else {
-            if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
-        }
-    }
-    
-    return data;
 }
 
 /**
@@ -452,7 +450,6 @@ function renderResults(data, currencySymbol) {
 /**
  * Renders/updates the charts with new forecast data.
  * @param {object} data The forecast results from the backend.
- * @param {string} currencySymbol The selected currency symbol.
  */
 function renderCharts(data) {
     const years = data["Years"].slice(1).map(y => `Year ${y}`);
@@ -477,4 +474,30 @@ function renderCharts(data) {
             data: { labels: years, datasets: [
                 { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
                 { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-            ]},\n            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }\n        }\n    }];\n\n    // Using a map to hold chart instances { 'revenueChart': chartInstance }\n    const charts = { revenueChart, cashDebtChart };\n\n    chartConfigs.forEach(cfg => {\n        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();\n        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);\n    });\n\n    // Re-assign global variables\n    revenueChart = charts.revenueChart;\n    cashDebtChart = charts.cashDebtChart;\n}\n\n\n// --- Initial Setup ---\n// Set the initial visibility of revenue growth inputs when the page loads\ndocument.addEventListener('DOMContentLoaded', () => {\n    const years = 3;\n    createGranularRevenueInputs(years); // NEW\n    createGranularCogsInputs(years);\n    createGranularInputs(years);      \n});
+            ]},
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
+        }
+    }];
+
+    // Using a map to hold chart instances { 'revenueChart': chartInstance }
+    const charts = { revenueChart, cashDebtChart };
+
+    chartConfigs.forEach(cfg => {
+        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
+        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
+    });
+
+    // Re-assign global variables
+    revenueChart = charts.revenueChart;
+    cashDebtChart = charts.cashDebtChart;
+}
+
+
+// --- Initial Setup ---
+// Set the initial visibility of revenue growth inputs when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const years = 3;
+    createGranularRevenueInputs(years); 
+    createGranularCogsInputs(years);
+    createGranularInputs(years);      
+});
