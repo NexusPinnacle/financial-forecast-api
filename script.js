@@ -238,20 +238,11 @@ function collectInputData() {
     data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
     data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
 
-    // Collect scalar inputs (including those the backend still expects for legacy reasons)
+    // Collect other scalar inputs
     data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
     data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
     data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
     data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-    
-    // FIX: Add single values for app.py to avoid TypeError
-    data.fixed_opex = parseFloat(document.getElementById('default_fixed_opex').value);
-    data.capex = parseFloat(document.getElementById('default_capex').value);
-    // You can also add these if your backend uses them for other things
-    data.default_revenue_growth = parseFloat(document.getElementById('default_revenue_growth').value) / 100;
-    data.default_cogs_pct = parseFloat(document.getElementById('default_cogs_pct').value) / 100;
-
-
     data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
     data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
     data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
