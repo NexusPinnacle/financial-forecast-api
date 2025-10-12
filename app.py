@@ -18,14 +18,18 @@ def home():
 
 def get_inputs_from_request(data):
     """Helper function to parse and convert inputs from request data."""
-    # NEW: Handle the list of revenue growth rates
+    # Handle the list of revenue growth rates
     revenue_growth_rates_str = data.get('revenue_growth_rates', [])
     revenue_growth_rates = [float(rate) for rate in revenue_growth_rates_str]
 
+    # NEW: Handle the list of COGS percentage rates
+    cogs_pct_rates_str = data.get('cogs_pct_rates', [])
+    cogs_pct_rates = [float(rate) for rate in cogs_pct_rates_str]
+
     inputs = {
         "initial_revenue": float(data.get('initial_revenue')),
-        "revenue_growth_rates": revenue_growth_rates, # MODIFIED
-        "cogs_pct": float(data.get('cogs_pct')),
+        "revenue_growth_rates": revenue_growth_rates, 
+        "cogs_pct_rates": cogs_pct_rates, # MODIFIED: Pass the list of COGS rates
         "fixed_opex": float(data.get('fixed_opex')),
         "tax_rate": float(data.get('tax_rate')),
         "initial_ppe": float(data.get('initial_ppe')),
