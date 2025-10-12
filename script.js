@@ -38,8 +38,17 @@ let cashDebtChart = null;
 function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
     container.innerHTML = ''; // Clear previous inputs
     
-    // Use the default value from the left pane
-    const defaultVal = parseFloat(document.getElementById(defaultValueId).value);
+    // --- FIX: Add robust checking for default value element ---
+    const defaultElement = document.getElementById(defaultValueId);
+    let defaultVal = 0; 
+    
+    if (defaultElement) {
+        defaultVal = parseFloat(defaultElement.value);
+    } else {
+        // If the element is missing, log a warning but continue with 0 to prevent script crash
+        console.warn(`Default input element not found for ID: ${defaultValueId}. Using 0.`);
+    }
+    // -----------------------------------------------------------
 
     for (let i = 1; i <= years; i++) {
         const inputDiv = document.createElement('div');
@@ -48,7 +57,7 @@ function createVerticalInputs(container, idPrefix, labelBase, years, defaultValu
         const initialValue = defaultVal;
         let labelText = `${labelBase} Year ${i} ${unit}:`;
         
-        // Special case for the last year's label (Revenue Growth only)
+        // Special case for the last year's label
         if (idPrefix === 'revenue_growth' && i === years && years < 10) {
             labelText = `${labelBase} Year ${i} (and thereafter) ${unit}:`;
         }
@@ -66,6 +75,8 @@ function createVerticalInputs(container, idPrefix, labelBase, years, defaultValu
  * @param {number} years - The number of years to generate inputs for.
  */
 function createAllGranularInputs(years) {
+    // All these calls rely on the existence of the default IDs in index.html, 
+    // which are now safely checked inside createVerticalInputs
     createVerticalInputs(revenueGrowthContainer, 'revenue_growth', 'Revenue Growth', years, 'default_revenue_growth', '0.1', '(%)');
     createVerticalInputs(cogsPctContainer, 'cogs_pct', 'COGS as % of Revenue', years, 'default_cogs_pct', '0.1', '(%)');
     createVerticalInputs(fixedOpexContainer, 'fixed_opex', 'Fixed Opex', years, 'default_fixed_opex', '0.01', '');
@@ -208,12 +219,11 @@ function collectInputData() {
         
         let defaultValue = 0; 
         
-        if (defaultValueId) {
-            const defaultElement = document.getElementById(defaultValueId);
-            if (defaultElement) {
-                defaultValue = parseFloat(defaultElement.value);
-            }
+        const defaultElement = document.getElementById(defaultValueId);
+        if (defaultElement) {
+            defaultValue = parseFloat(defaultElement.value);
         }
+
 
         for (let i = 1; i <= years; i++) {
             const input = document.getElementById(`${keyPrefix}_y${i}`);
@@ -238,7 +248,7 @@ function collectInputData() {
     data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
     data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
 
-    // Collect other scalar inputs
+    // Collect scalar inputs
     data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
     data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
     data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
