@@ -12,6 +12,8 @@ const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
+// NEW: COGS container element
+const cogsPctContainer = document.getElementById('cogs-pct-container');
 
 // Chart instances
 let revenueChart = null;
@@ -44,6 +46,33 @@ function updateRevenueGrowthInputs(yearsToShow) {
     });
 }
 
+/**
+ * NEW: Generates and populates year-specific COGS inputs.
+ * @param {number} years - The number of years to generate inputs for.
+ */
+function createGranularCogsInputs(years) {
+    cogsPctContainer.innerHTML = ''; // Clear previous inputs
+    
+    // Use the default COGS value from the left pane
+    const defaultCogs = parseFloat(document.getElementById('default_cogs_pct').value);
+
+    for (let i = 1; i <= years; i++) {
+        const inputDiv = document.createElement('div');
+        inputDiv.className = 'input-group';
+        
+        // Use the initial default COGS for all years
+        const initialValue = defaultCogs;
+        
+        const labelText = `COGS Year ${i} (%):`;
+
+        inputDiv.innerHTML = `
+            <label for="cogs_pct_y${i}">${labelText}</label>
+            <input type="number" id="cogs_pct_y${i}" value="${initialValue}" step="0.1" required>
+        `;
+        cogsPctContainer.appendChild(inputDiv);
+    }
+}
+
 // --- Event Listeners ---
 
 // Handle clicks on 3, 5, 10 year duration buttons
@@ -57,7 +86,14 @@ yearButtons.forEach(button => {
         
         // Call the new function to update the UI
         updateRevenueGrowthInputs(parseInt(newYears, 10));
+        createGranularCogsInputs(parseInt(newYears, 10)); // NEW
     });
+});
+
+// NEW: Event listener to re-generate COGS inputs if the default value changes
+document.getElementById('default_cogs_pct').addEventListener('change', () => {
+    const years = parseInt(forecastYearsInput.value, 10);
+    createGranularCogsInputs(years); // Call to refresh with new default value
 });
 
 // Main form submission for calculation
@@ -110,18 +146,27 @@ async function handleForecastRequest(url, isExport = false) {
 }
 
 /**
- * Gathers all data from the form inputs.
+ * Gathers all data from the form inputs. (MODIFIED)
  * @returns {object} The data object ready to be sent to the API.
  */
 function collectInputData() {
     const data = {};
     const years = parseInt(forecastYearsInput.value, 10);
     
-    // --- NEW: Collect year-specific revenue growth rates ---
+    // --- Collect year-specific revenue growth rates ---
     data.revenue_growth_rates = [];
     for (let i = 1; i <= years; i++) {
         const value = parseFloat(document.getElementById(`revenue_growth_y${i}`).value) / 100;
         data.revenue_growth_rates.push(value);
+    }
+    
+    // --- NEW: Collect year-specific COGS rates ---
+    data.cogs_pct_rates = [];
+    for (let i = 1; i <= years; i++) {
+        // Collect the granular value, or use the default if the granular field is missing
+        const input = document.getElementById(`cogs_pct_y${i}`);
+        const value = parseFloat(input?.value || document.getElementById('default_cogs_pct').value) / 100;
+        data.cogs_pct_rates.push(value);
     }
 
     // Collect other inputs
@@ -135,7 +180,7 @@ function collectInputData() {
     data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
     data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
     data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
-    data.cogs_pct = parseFloat(document.getElementById('cogs_pct').value) / 100;
+    // REMOVED: data.cogs_pct (now handled via cogs_pct_rates list)
     data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
     data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
     data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
@@ -312,5 +357,7 @@ function renderCharts(data) {
 // --- Initial Setup ---
 // Set the initial visibility of revenue growth inputs when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    updateRevenueGrowthInputs(3); // Default to 3 years
+    const years = 3;
+    updateRevenueGrowthInputs(years); // Default to 3 years
+    createGranularCogsInputs(years);   // NEW: Initialize granular COGS inputs
 });
