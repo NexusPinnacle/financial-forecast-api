@@ -247,30 +247,44 @@ function collectInputData() {
     const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
         const list = [];
         const factor = isPercentage ? 100 : 1;
-        const defaultValue = parseFloat(document.getElementById(defaultValueId).value);
+        
+        let defaultValue = 0; // Initialize to 0
+        
+        // FIX: Only attempt to read the default value if an ID is provided
+        if (defaultValueId) {
+            const defaultElement = document.getElementById(defaultValueId);
+            if (defaultElement) {
+                defaultValue = parseFloat(defaultElement.value);
+            }
+        }
 
         for (let i = 1; i <= years; i++) {
             const input = document.getElementById(`${keyPrefix}_y${i}`);
-            // Use the granular value or the default value if the granular field is missing/empty
-            const value = parseFloat(input?.value) / factor;
-            list.push(isNaN(value) ? defaultValue / factor : value);
+            // Safely get the value.
+            const value = parseFloat(input?.value);
+            
+            // If the input value is invalid (NaN or empty string), use the default value.
+            // Note: input?.value === "" check handles the case where the input exists but is empty.
+            const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
+
+            list.push(finalValue / factor);
         }
         return list;
     };
     
     // --- Collect all granular lists ---
-    data.revenue_growth_rates = collectList('revenue_growth', true);
-    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct');
-    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); // NEW
-    data.capex_rates = collectList('capex', false, 'default_capex'); // NEW
-    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); // NEW
-    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); // NEW
-    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); // NEW
-    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); // NEW
+    // Note: Revenue Growth inputs are hardcoded in index.html, so no default value ID is passed here.
+    data.revenue_growth_rates = collectList('revenue_growth', true); 
+    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
+    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
+    data.capex_rates = collectList('capex', false, 'default_capex'); 
+    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
+    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
+    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
+    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
 
     // Collect other scalar inputs
     data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-    // REMOVED: old scalar inputs ('fixed_opex', 'capex', 'dso_days', 'dio_days', 'dpo_days', 'annual_debt_repayment')
     data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
     data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
     data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
@@ -390,8 +404,6 @@ function renderResults(data, currencySymbol) {
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        // The CapEx calculation needs to use the CapEx list from the model output, but since the list isn't directly exposed in this format, 
-        // and we have an 'excel_cfs' key which has the correct line item, we'll rely on that structure for CapEx.
         { label: "Cash Flow from Investing (CapEx)", calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
         { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
