@@ -5,7 +5,7 @@ from forecaster import generate_forecast
 from flask_cors import CORS 
 
 app = Flask(
-    __name__,
+    __name__,\
     template_folder='.',    
     static_folder='.',      
     static_url_path='/'     
@@ -19,73 +19,74 @@ def home():
 def get_inputs_from_request(data):
     """Helper function to parse and convert inputs from request data."""
     
-    def parse_float_list(key, default=[]):
-        """Helper to parse a list of string floats from the request."""
-        rates_str = data.get(key, default)
-        return [float(rate) for rate in rates_str]
-
-    # Handle the list of revenue growth rates
-    revenue_growth_rates = parse_float_list('revenue_growth_rates')
-    # Handle the list of COGS percentage rates
-    cogs_pct_rates = parse_float_list('cogs_pct_rates')
-    
-    # NEW: Handle the lists for granular assumptions
-    fixed_opex_rates = parse_float_list('fixed_opex_rates')
-    capex_rates = parse_float_list('capex_rates')
-    dso_days_list = parse_float_list('dso_days_list')
-    dio_days_list = parse_float_list('dio_days_list')
-    dpo_days_list = parse_float_list('dpo_days_list')
-    annual_debt_repayment_list = parse_float_list('annual_debt_repayment_list')
+    # Helper to safely get and convert a list of strings to floats
+    def get_list_float(key):
+        list_str = data.get(key, [])
+        return [float(rate) for rate in list_str]
 
     inputs = {
         "initial_revenue": float(data.get('initial_revenue')),
-        "revenue_growth_rates": revenue_growth_rates, 
-        "cogs_pct_rates": cogs_pct_rates, 
-        # MODIFIED: Pass lists instead of scalars
-        "fixed_opex_rates": fixed_opex_rates,       # NEW
         "tax_rate": float(data.get('tax_rate')),
         "initial_ppe": float(data.get('initial_ppe')),
-        "capex_rates": capex_rates,                 # NEW
         "depreciation_rate": float(data.get('depreciation_rate')),
-        "dso_days_list": dso_days_list,             # NEW
-        "dio_days_list": dio_days_list,             # NEW
-        "dpo_days_list": dpo_days_list,             # NEW
-        "initial_debt": float(data.get('initial_debt')), 
+        "initial_debt": float(data.get('initial_debt')),
         "initial_cash": float(data.get('initial_cash')),
         "interest_rate": float(data.get('interest_rate')),
-        "annual_debt_repayment_list": annual_debt_repayment_list, # NEW
-        "years": int(data.get('years', 3))
+        "years": int(data.get('years', 3)),
+        
+        # GRANULAR LISTS - New inputs matching the updated forecaster.py
+        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
+        "cogs_pct_rates": get_list_float('cogs_pct_rates'),
+        "fixed_opex_rates": get_list_float('fixed_opex_rates'),
+        "capex_rates": get_list_float('capex_rates'),
+        "dso_days_list": get_list_float('dso_days_list'),
+        "dio_days_list": get_list_float('dio_days_list'),
+        "dpo_days_list": get_list_float('dpo_days_list'),
+        "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
     }
-    # REMOVED: The old scalar inputs: 'fixed_opex', 'capex', 'dso_days', 'dio_days', 'dpo_days', 'annual_debt_repayment'
+    
+    # Validation to catch missing data early
+    for key, value in inputs.items():
+        if value is None or (isinstance(value, list) and not value):
+             raise ValueError(f"Missing or invalid input data for: {key}")
+
     return inputs
 
 @app.route('/api/forecast', methods=['POST'])
 def forecast():
-    data = request.json
     try:
+        data = request.json
         inputs = get_inputs_from_request(data)
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid number format received."}), 400
-
-    forecast_results = generate_forecast(**inputs)
-    return jsonify(forecast_results)
+        
+        forecast_results = generate_forecast(**inputs)
+        
+        return jsonify(forecast_results)
+    
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        # Log the full traceback for better debugging on the server side
+        import traceback
+        app.logger.error(f"An internal error occurred: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": f"Internal Server Error during calculation: {e}"}), 500
 
 @app.route('/api/export', methods=['POST'])
-def export_forecast():
-    data = request.json
+def export_to_excel():
     try:
+        data = request.json
         inputs = get_inputs_from_request(data)
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid number format received."}), 400
-    
-    forecast_results = generate_forecast(**inputs)
-    
-    output = BytesIO()
-    num_years = inputs['years'] 
-    is_cfs_years = [f'Year {i}' for i in range(1, num_years + 1)]
-    bs_years = ['Year 0'] + is_cfs_years
+        
+        forecast_results = generate_forecast(**inputs)
 
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # File Export Logic... (remains unchanged as it uses the same results structure)
+        output = BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        
+        # Prepare DataFrames for Excel (using 1-based year indexing for IS/CFS headers, 0-based for BS)
+        is_cfs_years = [f"Year {y}" for y in forecast_results['Years'][1:]]
+        bs_years = [f"Year {y}" for y in forecast_results['Years']]
+        bs_years[0] = 'Year 0 (Initial)'
+        
         df_is = pd.DataFrame(forecast_results['excel_is'])
         df_is.index = is_cfs_years
         df_is.T.to_excel(writer, sheet_name='Income Statement', startrow=1, header=True, 
@@ -113,14 +114,20 @@ def export_forecast():
             column_width = max(max_len, header_len)
             worksheet.column_dimensions['A'].width = column_width
 
-    output.seek(0)
-    
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name='Financial_Forecast.xlsx',
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+        writer.close()
+        output.seek(0)
+        
+        return send_file(
+            output, 
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='Financial_Forecast.xlsx'
+        )
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        # Log the full traceback for better debugging on the server side
+        import traceback
+        app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
