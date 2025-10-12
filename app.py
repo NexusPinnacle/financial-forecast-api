@@ -18,32 +18,45 @@ def home():
 
 def get_inputs_from_request(data):
     """Helper function to parse and convert inputs from request data."""
-    # Handle the list of revenue growth rates
-    revenue_growth_rates_str = data.get('revenue_growth_rates', [])
-    revenue_growth_rates = [float(rate) for rate in revenue_growth_rates_str]
+    
+    def parse_float_list(key, default=[]):
+        """Helper to parse a list of string floats from the request."""
+        rates_str = data.get(key, default)
+        return [float(rate) for rate in rates_str]
 
-    # NEW: Handle the list of COGS percentage rates
-    cogs_pct_rates_str = data.get('cogs_pct_rates', [])
-    cogs_pct_rates = [float(rate) for rate in cogs_pct_rates_str]
+    # Handle the list of revenue growth rates
+    revenue_growth_rates = parse_float_list('revenue_growth_rates')
+    # Handle the list of COGS percentage rates
+    cogs_pct_rates = parse_float_list('cogs_pct_rates')
+    
+    # NEW: Handle the lists for granular assumptions
+    fixed_opex_rates = parse_float_list('fixed_opex_rates')
+    capex_rates = parse_float_list('capex_rates')
+    dso_days_list = parse_float_list('dso_days_list')
+    dio_days_list = parse_float_list('dio_days_list')
+    dpo_days_list = parse_float_list('dpo_days_list')
+    annual_debt_repayment_list = parse_float_list('annual_debt_repayment_list')
 
     inputs = {
         "initial_revenue": float(data.get('initial_revenue')),
         "revenue_growth_rates": revenue_growth_rates, 
-        "cogs_pct_rates": cogs_pct_rates, # MODIFIED: Pass the list of COGS rates
-        "fixed_opex": float(data.get('fixed_opex')),
+        "cogs_pct_rates": cogs_pct_rates, 
+        # MODIFIED: Pass lists instead of scalars
+        "fixed_opex_rates": fixed_opex_rates,       # NEW
         "tax_rate": float(data.get('tax_rate')),
         "initial_ppe": float(data.get('initial_ppe')),
-        "capex": float(data.get('capex')),
+        "capex_rates": capex_rates,                 # NEW
         "depreciation_rate": float(data.get('depreciation_rate')),
-        "dso_days": float(data.get('dso_days')), 
-        "dio_days": float(data.get('dio_days')), 
-        "dpo_days": float(data.get('dpo_days')), 
+        "dso_days_list": dso_days_list,             # NEW
+        "dio_days_list": dio_days_list,             # NEW
+        "dpo_days_list": dpo_days_list,             # NEW
         "initial_debt": float(data.get('initial_debt')), 
         "initial_cash": float(data.get('initial_cash')),
         "interest_rate": float(data.get('interest_rate')),
-        "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)),
+        "annual_debt_repayment_list": annual_debt_repayment_list, # NEW
         "years": int(data.get('years', 3))
     }
+    # REMOVED: The old scalar inputs: 'fixed_opex', 'capex', 'dso_days', 'dio_days', 'dpo_days', 'annual_debt_repayment'
     return inputs
 
 @app.route('/api/forecast', methods=['POST'])
