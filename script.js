@@ -417,4 +417,43 @@ function renderCharts(data) {
             data: { labels: years, datasets: [
                 { label: 'Revenue', data: data["Revenue"].slice(1), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
                 { label: 'Net Income', data: data["Net Income"].slice(1), backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'y' },
-                { type: 'line',
+                { type: 'line', label: 'EBIT %', data: ebitPct, borderColor: 'rgb(255, 99, 132)', borderWidth: 3, fill: false, yAxisID: 'y1' }
+            ]},
+            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: {
+                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Amount' } },
+                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentage (%)' } }
+            }, plugins: { title: { display: true, text: 'Profitability Trends' } } }
+        }
+    }, {
+        chartVar: 'cashDebtChart', canvasId: 'cashDebtChart', config: {
+            type: 'bar',
+            data: { labels: years, datasets: [
+                { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
+                { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+            ]},
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
+        }
+    }];
+
+    // Using a map to hold chart instances { 'revenueChart': chartInstance }
+    const charts = { revenueChart, cashDebtChart };
+
+    chartConfigs.forEach(cfg => {
+        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
+        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
+    });
+
+    // Re-assign global variables
+    revenueChart = charts.revenueChart;
+    cashDebtChart = charts.cashDebtChart;
+}
+
+
+// --- Initial Setup ---
+// Set the initial visibility of revenue growth inputs when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const years = 3;
+    updateRevenueGrowthInputs(years); // Default to 3 years
+    createGranularCogsInputs(years);   // Initialize granular COGS inputs
+    createGranularInputs(years);       // NEW: Initialize other granular inputs
+});
