@@ -47,16 +47,8 @@
                         <input type="number" id="default_cogs_pct" value="40" step="0.1" required>
                     </div>
                     <div class="input-group">
-                        <label for="fixed_opex">Fixed Operating Expenses:</label>
-                        <input type="number" id="fixed_opex" value="100" step="0.01" required>
-                    </div>
-                    <div class="input-group">
                         <label for="initial_ppe">Initial PP&E (Year 0):</label>
                         <input type="number" id="initial_ppe" value="500" step="0.01" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="capex">Annual Capital Expenditure:</label>
-                        <input type="number" id="capex" value="50" step="0.01" required>
                     </div>
                     <div class="input-group">
                         <label for="depreciation_rate">Depreciation Rate (%):</label>
@@ -67,24 +59,24 @@
                         <input type="number" id="tax_rate" value="25" step="0.1" required>
                     </div>
 
-                    <h3>Working Capital Assumptions (in Days)</h3>
+                    <h3>Working Capital Assumptions (Defaults)</h3>
                     <div class="input-group">
-                        <label for="dso_days">Days Sales Outstanding (AR) (Days):
+                        <label for="default_dso_days">Days Sales Outstanding (AR) (Default Days):
                             <span class="tooltip-trigger" title="Average number of days it takes for customers to pay their invoices.">❓</span>
                         </label>
-                        <input type="number" id="dso_days" value="45" step="1" required>
+                        <input type="number" id="default_dso_days" value="45" step="1" required>
                     </div>
                     <div class="input-group">
-                        <label for="dio_days">Days Inventory Outstanding (Inventory) (Days):
+                        <label for="default_dio_days">Days Inventory Outstanding (Inventory) (Default Days):
                             <span class="tooltip-trigger" title="Average number of days inventory is held before it's sold.">❓</span>
                         </label>
-                        <input type="number" id="dio_days" value="30" step="1" required>
+                        <input type="number" id="default_dio_days" value="30" step="1" required>
                     </div>
                     <div class="input-group">
-                        <label for="dpo_days">Days Payable Outstanding (AP) (Days):
+                        <label for="default_dpo_days">Days Payable Outstanding (AP) (Default Days):
                             <span class="tooltip-trigger" title="Average number of days it takes the company to pay its suppliers.">❓</span>
                         </label>
-                        <input type="number" id="dpo_days" value="60" step="1" required>
+                        <input type="number" id="default_dpo_days" value="60" step="1" required>
                     </div>
                     
                     <h3>Financing & Cash Assumptions</h3>
@@ -97,18 +89,29 @@
                         <input type="number" id="initial_debt" value="200" step="0.01" required>
                     </div>
                     <div class="input-group">
-                        <label for="annual_debt_repayment">Annual Debt Repayment:</label>
-                        <input type="number" id="annual_debt_repayment" value="50" step="0.01" required>
+                        <label for="default_annual_debt_repayment">Annual Debt Repayment (Default):</label>
+                        <input type="number" id="default_annual_debt_repayment" value="50" step="0.01" required>
                     </div>
                     <div class="input-group">
                         <label for="interest_rate">Interest Rate (%):</label>
                         <input type="number" id="interest_rate" value="5" step="0.1" required>
                     </div>
-                </div> <div class="right-pane">
+                    <div class="input-group">
+                        <label for="default_fixed_opex">Fixed Operating Expenses (Default):</label>
+                        <input type="number" id="default_fixed_opex" value="100" step="0.01" required>
+                    </div>
+                     <div class="input-group">
+                        <label for="default_capex">Annual Capital Expenditure (Default):</label>
+                        <input type="number" id="default_capex" value="50" step="0.01" required>
+                    </div>
+                </div> 
+                
+                <div class="right-pane">
                     <h2>Granular Assumptions</h2>
+                    <p>Inputs here override the default values for the specified year.</p>
                     
                     <div class="granular-section">
-                        <h4>Revenue Growth (Year-Specific)</h4>
+                        <h4>Revenue Growth (%)</h4>
                         <div id="revenue-growth-container">
                             <div class="input-group" data-year="1">
                                 <label for="revenue_growth_y1">Revenue Growth Year 1 (%):</label>
@@ -156,10 +159,33 @@
                     <div class="granular-section">
                         <h4>Direct Costs (COGS % per Year)</h4>
                         <div id="cogs-pct-container">
-                            </div>
+                        </div>
                     </div>
 
-                </div> </div> <button type="submit" id="calculateBtn">Calculate Forecast</button>
+                    <div class="granular-section">
+                        <h4>Fixed Operating Expenses (Amount per Year)</h4>
+                        <div id="fixed-opex-container"></div>
+                    </div>
+                    
+                    <div class="granular-section">
+                        <h4>Capital Expenditure (Amount per Year)</h4>
+                        <div id="capex-container"></div>
+                    </div>
+
+                    <div class="granular-section">
+                        <h4>Working Capital Days (Days per Year)</h4>
+                        <div id="working-capital-container"></div>
+                    </div>
+                    
+                    <div class="granular-section">
+                        <h4>Annual Debt Repayment (Amount per Year)</h4>
+                        <div id="debt-repayment-container"></div>
+                    </div>
+
+                </div> 
+            </div> 
+            
+            <button type="submit" id="calculateBtn">Calculate Forecast</button>
             <p id="error-message" class="error-message"></p>
         </form>
 
