@@ -185,3 +185,59 @@ label {
     font-weight: bold;
     border-color: #3b84f5;
 }
+
+/* --- NEW: Two-Pane Layout for Inputs --- */
+.input-layout {
+    display: flex; /* Use flexbox for the two panes */
+    gap: 40px;
+    margin-top: 20px;
+}
+
+.left-pane {
+    flex-basis: 50%;
+    min-width: 45%;
+    /* Highlight the division */
+    padding-right: 20px; 
+    border-right: 1px solid #eee;
+}
+
+.right-pane {
+    flex-basis: 50%;
+    min-width: 45%;
+}
+
+/* Ensure sub-sections in the right pane have proper spacing */
+.granular-section {
+    margin-bottom: 30px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #ddd;
+}
+
+.granular-section:last-child {
+    border-bottom: none;
+}
+
+/* Adjust button to span the full width of the main container again */
+#calculateBtn, #exportBtn {
+    width: calc(100% - 60px); /* 100% of max-width - padding on container */
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block; /* Center the button */
+}
+
+/* Media query for smaller screens: stack the panes vertically */
+@media (max-width: 950px) {
+    .input-layout {
+        flex-direction: column;
+    }
+    .left-pane {
+        padding-right: 0;
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+    }
+    .right-pane {
+        margin-top: 20px;
+    }
+}
