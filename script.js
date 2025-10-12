@@ -12,8 +12,9 @@ const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
+// NEW: COGS container element
 const cogsPctContainer = document.getElementById('cogs-pct-container');
-// NEW: Granular assumption containers
+// Granular assumption containers
 const fixedOpexContainer = document.getElementById('fixed-opex-container');
 const capexContainer = document.getElementById('capex-container');
 const workingCapitalContainer = document.getElementById('working-capital-container');
@@ -24,7 +25,36 @@ let revenueChart = null;
 let cashDebtChart = null;
 
 /**
- * NEW: Shows/hides year-specific revenue growth inputs based on selected forecast duration.
+ * NEW: Generates and populates year-specific Revenue Growth inputs.
+ * @param {number} years - The number of years to generate inputs for.
+ */
+function createGranularRevenueInputs(years) {
+    revenueGrowthContainer.innerHTML = ''; // Clear previous inputs
+    
+    // Use the new default revenue growth value from the left pane
+    const defaultGrowth = parseFloat(document.getElementById('default_revenue_growth').value);
+
+    for (let i = 1; i <= 10; i++) { // Always generate up to 10 years, visibility handled by updateRevenueGrowthInputs
+        const inputDiv = document.createElement('div');
+        inputDiv.className = 'input-group';
+        inputDiv.dataset.year = i; // Store year for visibility control
+        
+        const initialValue = defaultGrowth;
+        const labelText = `Revenue Growth Year ${i} (%):`;
+
+        inputDiv.innerHTML = `
+            <label for="revenue_growth_y${i}">${labelText}</label>
+            <input type="number" id="revenue_growth_y${i}" value="${initialValue}" step="0.1" required>
+        `;
+        revenueGrowthContainer.appendChild(inputDiv);
+    }
+    // Set initial visibility
+    updateRevenueGrowthInputs(years);
+}
+
+
+/**
+ * Shows/hides year-specific revenue growth inputs based on selected forecast duration.
  * Also updates the label of the last visible input to say "(and thereafter)".
  * @param {number} yearsToShow - The number of years to show inputs for (3, 5, or 10).
  */
@@ -77,10 +107,11 @@ function createGranularCogsInputs(years) {
 }
 
 /**
- * NEW: Generates and populates year-specific inputs for Fixed Opex, CapEx, DSO, DIO, DPO, and Debt Repayment.
+ * Generates and populates year-specific inputs for Fixed Opex, CapEx, DSO, DIO, DPO, and Debt Repayment.
  * @param {number} years - The number of years to generate inputs for.
  */
 function createGranularInputs(years) {
+    // Note: Revenue inputs are now handled by createGranularRevenueInputs
     fixedOpexContainer.innerHTML = '';
     capexContainer.innerHTML = '';
     workingCapitalContainer.innerHTML = '';
@@ -151,13 +182,18 @@ yearButtons.forEach(button => {
         forecastYearsInput.value = newYears;
         const yearsInt = parseInt(newYears, 10);
         
-        updateRevenueGrowthInputs(yearsInt);
+        updateRevenueGrowthInputs(yearsInt); // Re-set visibility and labels
+        // Need to regenerate all inputs if duration changes to ensure they reflect the new horizon size
         createGranularCogsInputs(yearsInt);
-        createGranularInputs(yearsInt); // NEW: Generate other granular inputs
+        createGranularInputs(yearsInt); 
     });
 });
 
 // NEW: Event listeners to re-generate granular inputs if the default values change
+document.getElementById('default_revenue_growth').addEventListener('change', () => {
+    createGranularRevenueInputs(parseInt(forecastYearsInput.value, 10));
+});
+
 document.getElementById('default_cogs_pct').addEventListener('change', () => {
     createGranularCogsInputs(parseInt(forecastYearsInput.value, 10));
 });
@@ -236,7 +272,7 @@ async function handleForecastRequest(url, isExport = false) {
 }
 
 /**
- * Gathers all data from the form inputs. (MODIFIED)
+ * Gathers all data from the form inputs.
  * @returns {object} The data object ready to be sent to the API.
  */
 function collectInputData() {
@@ -248,9 +284,8 @@ function collectInputData() {
         const list = [];
         const factor = isPercentage ? 100 : 1;
         
-        let defaultValue = 0; // Initialize to 0
+        let defaultValue = 0; 
         
-        // FIX: Only attempt to read the default value if an ID is provided
         if (defaultValueId) {
             const defaultElement = document.getElementById(defaultValueId);
             if (defaultElement) {
@@ -260,11 +295,10 @@ function collectInputData() {
 
         for (let i = 1; i <= years; i++) {
             const input = document.getElementById(`${keyPrefix}_y${i}`);
-            // Safely get the value.
+            
             const value = parseFloat(input?.value);
             
             // If the input value is invalid (NaN or empty string), use the default value.
-            // Note: input?.value === "" check handles the case where the input exists but is empty.
             const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
 
             list.push(finalValue / factor);
@@ -273,8 +307,8 @@ function collectInputData() {
     };
     
     // --- Collect all granular lists ---
-    // Note: Revenue Growth inputs are hardcoded in index.html, so no default value ID is passed here.
-    data.revenue_growth_rates = collectList('revenue_growth', true); 
+    // Revenue Growth now uses the new default input
+    data.revenue_growth_rates = collectList('revenue_growth', true, 'default_revenue_growth'); 
     data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
     data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
     data.capex_rates = collectList('capex', false, 'default_capex'); 
@@ -293,7 +327,7 @@ function collectInputData() {
     data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
     data.years = years;
 
-    // Validate all collected data (simplified check for NaN in lists)
+    // Validate all collected data 
     for (const key in data) {
         const value = data[key];
         if (Array.isArray(value)) {
@@ -418,6 +452,7 @@ function renderResults(data, currencySymbol) {
 /**
  * Renders/updates the charts with new forecast data.
  * @param {object} data The forecast results from the backend.
+ * @param {string} currencySymbol The selected currency symbol.
  */
 function renderCharts(data) {
     const years = data["Years"].slice(1).map(y => `Year ${y}`);
@@ -442,30 +477,4 @@ function renderCharts(data) {
             data: { labels: years, datasets: [
                 { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
                 { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-            ]},
-            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
-        }
-    }];
-
-    // Using a map to hold chart instances { 'revenueChart': chartInstance }
-    const charts = { revenueChart, cashDebtChart };
-
-    chartConfigs.forEach(cfg => {
-        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
-        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
-    });
-
-    // Re-assign global variables
-    revenueChart = charts.revenueChart;
-    cashDebtChart = charts.cashDebtChart;
-}
-
-
-// --- Initial Setup ---
-// Set the initial visibility of revenue growth inputs when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    const years = 3;
-    updateRevenueGrowthInputs(years); // Default to 3 years
-    createGranularCogsInputs(years);   // Initialize granular COGS inputs
-    createGranularInputs(years);       // NEW: Initialize other granular inputs
-});
+            ]},\n            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }\n        }\n    }];\n\n    // Using a map to hold chart instances { 'revenueChart': chartInstance }\n    const charts = { revenueChart, cashDebtChart };\n\n    chartConfigs.forEach(cfg => {\n        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();\n        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);\n    });\n\n    // Re-assign global variables\n    revenueChart = charts.revenueChart;\n    cashDebtChart = charts.cashDebtChart;\n}\n\n\n// --- Initial Setup ---\n// Set the initial visibility of revenue growth inputs when the page loads\ndocument.addEventListener('DOMContentLoaded', () => {\n    const years = 3;\n    createGranularRevenueInputs(years); // NEW\n    createGranularCogsInputs(years);\n    createGranularInputs(years);      \n});
