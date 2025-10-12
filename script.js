@@ -12,8 +12,12 @@ const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
-// NEW: COGS container element
 const cogsPctContainer = document.getElementById('cogs-pct-container');
+// NEW: Granular assumption containers
+const fixedOpexContainer = document.getElementById('fixed-opex-container');
+const capexContainer = document.getElementById('capex-container');
+const workingCapitalContainer = document.getElementById('working-capital-container');
+const debtRepaymentContainer = document.getElementById('debt-repayment-container');
 
 // Chart instances
 let revenueChart = null;
@@ -60,7 +64,6 @@ function createGranularCogsInputs(years) {
         const inputDiv = document.createElement('div');
         inputDiv.className = 'input-group';
         
-        // Use the initial default COGS for all years
         const initialValue = defaultCogs;
         
         const labelText = `COGS Year ${i} (%):`;
@@ -73,6 +76,69 @@ function createGranularCogsInputs(years) {
     }
 }
 
+/**
+ * NEW: Generates and populates year-specific inputs for Fixed Opex, CapEx, DSO, DIO, DPO, and Debt Repayment.
+ * @param {number} years - The number of years to generate inputs for.
+ */
+function createGranularInputs(years) {
+    fixedOpexContainer.innerHTML = '';
+    capexContainer.innerHTML = '';
+    workingCapitalContainer.innerHTML = '';
+    debtRepaymentContainer.innerHTML = '';
+
+    const defaultFixedOpex = parseFloat(document.getElementById('default_fixed_opex').value);
+    const defaultCapex = parseFloat(document.getElementById('default_capex').value);
+    const defaultDSO = parseFloat(document.getElementById('default_dso_days').value);
+    const defaultDIO = parseFloat(document.getElementById('default_dio_days').value);
+    const defaultDPO = parseFloat(document.getElementById('default_dpo_days').value);
+    const defaultDebtRepay = parseFloat(document.getElementById('default_annual_debt_repayment').value);
+
+    for (let i = 1; i <= years; i++) {
+        // Fixed Opex
+        fixedOpexContainer.innerHTML += `
+            <div class="input-group">
+                <label for="fixed_opex_y${i}">Opex Year ${i}:</label>
+                <input type="number" id="fixed_opex_y${i}" value="${defaultFixedOpex}" step="0.01" required>
+            </div>`;
+
+        // CapEx
+        capexContainer.innerHTML += `
+            <div class="input-group">
+                <label for="capex_y${i}">CapEx Year ${i}:</label>
+                <input type="number" id="capex_y${i}" value="${defaultCapex}" step="0.01" required>
+            </div>`;
+
+        // DSO
+        workingCapitalContainer.innerHTML += `
+            <div class="input-group">
+                <label for="dso_days_y${i}">DSO Year ${i}:</label>
+                <input type="number" id="dso_days_y${i}" value="${defaultDSO}" step="1" required>
+            </div>`;
+        
+        // DIO
+        workingCapitalContainer.innerHTML += `
+            <div class="input-group">
+                <label for="dio_days_y${i}">DIO Year ${i}:</label>
+                <input type="number" id="dio_days_y${i}" value="${defaultDIO}" step="1" required>
+            </div>`;
+            
+        // DPO
+        workingCapitalContainer.innerHTML += `
+            <div class="input-group">
+                <label for="dpo_days_y${i}">DPO Year ${i}:</label>
+                <input type="number" id="dpo_days_y${i}" value="${defaultDPO}" step="1" required>
+            </div>`;
+
+        // Debt Repayment
+        debtRepaymentContainer.innerHTML += `
+            <div class="input-group">
+                <label for="debt_repayment_y${i}">Repayment Year ${i}:</label>
+                <input type="number" id="debt_repayment_y${i}" value="${defaultDebtRepay}" step="0.01" required>
+            </div>`;
+    }
+}
+
+
 // --- Event Listeners ---
 
 // Handle clicks on 3, 5, 10 year duration buttons
@@ -83,17 +149,41 @@ yearButtons.forEach(button => {
         
         const newYears = button.getAttribute('data-years');
         forecastYearsInput.value = newYears;
+        const yearsInt = parseInt(newYears, 10);
         
-        // Call the new function to update the UI
-        updateRevenueGrowthInputs(parseInt(newYears, 10));
-        createGranularCogsInputs(parseInt(newYears, 10)); // NEW
+        updateRevenueGrowthInputs(yearsInt);
+        createGranularCogsInputs(yearsInt);
+        createGranularInputs(yearsInt); // NEW: Generate other granular inputs
     });
 });
 
-// NEW: Event listener to re-generate COGS inputs if the default value changes
+// NEW: Event listeners to re-generate granular inputs if the default values change
 document.getElementById('default_cogs_pct').addEventListener('change', () => {
-    const years = parseInt(forecastYearsInput.value, 10);
-    createGranularCogsInputs(years); // Call to refresh with new default value
+    createGranularCogsInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_fixed_opex').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_capex').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_dso_days').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_dio_days').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_dpo_days').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+document.getElementById('default_annual_debt_repayment').addEventListener('change', () => {
+    createGranularInputs(parseInt(forecastYearsInput.value, 10));
 });
 
 // Main form submission for calculation
@@ -153,44 +243,47 @@ function collectInputData() {
     const data = {};
     const years = parseInt(forecastYearsInput.value, 10);
     
-    // --- Collect year-specific revenue growth rates ---
-    data.revenue_growth_rates = [];
-    for (let i = 1; i <= years; i++) {
-        const value = parseFloat(document.getElementById(`revenue_growth_y${i}`).value) / 100;
-        data.revenue_growth_rates.push(value);
-    }
-    
-    // --- NEW: Collect year-specific COGS rates ---
-    data.cogs_pct_rates = [];
-    for (let i = 1; i <= years; i++) {
-        // Collect the granular value, or use the default if the granular field is missing
-        const input = document.getElementById(`cogs_pct_y${i}`);
-        const value = parseFloat(input?.value || document.getElementById('default_cogs_pct').value) / 100;
-        data.cogs_pct_rates.push(value);
-    }
+    // Helper to collect granular data lists
+    const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
+        const list = [];
+        const factor = isPercentage ? 100 : 1;
+        const defaultValue = parseFloat(document.getElementById(defaultValueId).value);
 
-    // Collect other inputs
+        for (let i = 1; i <= years; i++) {
+            const input = document.getElementById(`${keyPrefix}_y${i}`);
+            // Use the granular value or the default value if the granular field is missing/empty
+            const value = parseFloat(input?.value) / factor;
+            list.push(isNaN(value) ? defaultValue / factor : value);
+        }
+        return list;
+    };
+    
+    // --- Collect all granular lists ---
+    data.revenue_growth_rates = collectList('revenue_growth', true);
+    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct');
+    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); // NEW
+    data.capex_rates = collectList('capex', false, 'default_capex'); // NEW
+    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); // NEW
+    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); // NEW
+    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); // NEW
+    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); // NEW
+
+    // Collect other scalar inputs
     data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-    data.fixed_opex = parseFloat(document.getElementById('fixed_opex').value);
+    // REMOVED: old scalar inputs ('fixed_opex', 'capex', 'dso_days', 'dio_days', 'dpo_days', 'annual_debt_repayment')
     data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
-    data.capex = parseFloat(document.getElementById('capex').value);
-    data.dso_days = parseFloat(document.getElementById('dso_days').value);
-    data.dio_days = parseFloat(document.getElementById('dio_days').value);
-    data.dpo_days = parseFloat(document.getElementById('dpo_days').value);
     data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
     data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-    data.annual_debt_repayment = parseFloat(document.getElementById('annual_debt_repayment').value);
-    // REMOVED: data.cogs_pct (now handled via cogs_pct_rates list)
     data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
     data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
     data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
     data.years = years;
 
-    // Validate all collected data
+    // Validate all collected data (simplified check for NaN in lists)
     for (const key in data) {
         const value = data[key];
         if (Array.isArray(value)) {
-            if (value.some(isNaN)) throw new Error(`Invalid value for ${key}.`);
+            if (value.some(isNaN)) throw new Error(`Invalid number in list for ${key}.`);
         } else {
             if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
         }
@@ -297,7 +390,9 @@ function renderResults(data, currencySymbol) {
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Investing (CapEx)", calculation: () => is_cfs_years.map(() => -parseFloat(document.getElementById('capex').value)), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
+        // The CapEx calculation needs to use the CapEx list from the model output, but since the list isn't directly exposed in this format, 
+        // and we have an 'excel_cfs' key which has the correct line item, we'll rely on that structure for CapEx.
+        { label: "Cash Flow from Investing (CapEx)", calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
         { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
     ];
@@ -322,42 +417,4 @@ function renderCharts(data) {
             data: { labels: years, datasets: [
                 { label: 'Revenue', data: data["Revenue"].slice(1), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
                 { label: 'Net Income', data: data["Net Income"].slice(1), backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'y' },
-                { type: 'line', label: 'EBIT %', data: ebitPct, borderColor: 'rgb(255, 99, 132)', borderWidth: 3, fill: false, yAxisID: 'y1' }
-            ]},
-            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: {
-                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Amount' } },
-                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentage (%)' } }
-            }, plugins: { title: { display: true, text: 'Profitability Trends' } } }
-        }
-    }, {
-        chartVar: 'cashDebtChart', canvasId: 'cashDebtChart', config: {
-            type: 'bar',
-            data: { labels: years, datasets: [
-                { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
-                { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-            ]},
-            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
-        }
-    }];
-
-    // Using a map to hold chart instances { 'revenueChart': chartInstance }
-    const charts = { revenueChart, cashDebtChart };
-
-    chartConfigs.forEach(cfg => {
-        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
-        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
-    });
-
-    // Re-assign global variables
-    revenueChart = charts.revenueChart;
-    cashDebtChart = charts.cashDebtChart;
-}
-
-
-// --- Initial Setup ---
-// Set the initial visibility of revenue growth inputs when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    const years = 3;
-    updateRevenueGrowthInputs(years); // Default to 3 years
-    createGranularCogsInputs(years);   // NEW: Initialize granular COGS inputs
-});
+                { type: 'line',
