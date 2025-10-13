@@ -191,9 +191,24 @@ def generate_forecast(
             "Interest Expense": interest_expense[1:], "EBT": ebt[1:], "Taxes": taxes[1:], "Net Income": net_income[1:],
         },
         "excel_bs": {
-            "Cash": cash_closing, "Accounts Receivable": ar_closing, "Inventory": inventory_closing, 
-            "Net PP&E": ppe_closing, "Accounts Payable": ap_closing, "Debt": debt_closing,
-            "Retained Earnings": retained_earnings,
+            # FIX: Slice the lists to only include Year 1 onwards, aligning list length with IS/CFS
+            "Cash": cash_closing[1:], 
+            "Accounts Receivable": ar_closing[1:], 
+            "Inventory": inventory_closing[1:], 
+            "Net PP&E": ppe_closing[1:], 
+            "Accounts Payable": ap_closing[1:], 
+            "Debt": debt_closing[1:],
+            "Retained Earnings": retained_earnings[1:],
+        },
+        "excel_bs_year0": { 
+            # ADDED: Separate dictionary for Year 0 initial balances
+            "Cash": cash_closing[0], 
+            "Accounts Receivable": ar_closing[0], 
+            "Inventory": inventory_closing[0], 
+            "Net PP&E": ppe_closing[0], 
+            "Accounts Payable": ap_closing[0], 
+            "Debt": debt_closing[0],
+            "Retained Earnings": retained_earnings[0],
         },
         "excel_cfs": cfs_data,
         "Cash Flow from Financing": cash_flow_from_financing, 
