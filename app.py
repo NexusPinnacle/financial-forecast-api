@@ -78,41 +78,47 @@ def export_to_excel():
         
         forecast_results = generate_forecast(**inputs)
 
-        # File Export Logic... (remains unchanged as it uses the same results structure)
         output = BytesIO()
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
         
-        # Prepare DataFrames for Excel (using 1-based year indexing for IS/CFS headers, 0-based for BS)
+        # Prepare DataFrames for Excel
         is_cfs_years = [f"Year {y}" for y in forecast_results['Years'][1:]]
         bs_years = [f"Year {y}" for y in forecast_results['Years']]
         bs_years[0] = 'Year 0 (Initial)'
         
-        df_is = pd.DataFrame(forecast_results['excel_is'])
-        df_is.index = is_cfs_years
-        df_is.T.to_excel(writer, sheet_name='Income Statement', startrow=1, header=True, 
+        # Transpose DataFrames for correct orientation in Excel
+        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years).T
+        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
+        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
+        
+        # Write DataFrames to Excel sheets
+        df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
+            index_label='Line Item', float_format='%.1f')
+        df_bs.to_excel(writer, sheet_name='Balance Sheet', startrow=0, header=True, 
+            index_label='Line Item', float_format='%.1f')
+        df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
             index_label='Line Item', float_format='%.1f')
         
-        df_bs = pd.DataFrame(forecast_results['excel_bs'])
-        df_bs.index = bs_years
-        df_bs.T.to_excel(writer, sheet_name='Balance Sheet', startrow=1, header=True, 
-            index_label='Line Item', float_format='%.1f')
-        
-        df_cfs = pd.DataFrame(forecast_results['excel_cfs'])
-        df_cfs.index = is_cfs_years
-        df_cfs.T.to_excel(writer, sheet_name='Cash Flow Statement', startrow=1, header=True, 
-            index_label='Line Item', float_format='%.1f')
+        # --- FIX & AUTO FIT LOGIC ---
+        # Loop through each sheet to set column widths
+        for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
+            worksheet = writer.sheets[sheet_name]
+            
+            # 1. Autofit the first column (A) based on the length of the line items
+            # Add 2 for padding
+            col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
+            worksheet.set_column('A:A', col_a_width)
 
-        sheet_index_map = {
-            'Income Statement': df_is.index, 'Balance Sheet': df_bs.index,
-            'Cash Flow Statement': df_cfs.index
-        }
-
-        for sheet_name, index_labels in sheet_index_map.items():
-            worksheet = writer.sheets[sheet_name] 
-            max_len = max(len(str(s)) for s in index_labels) + 2 
-            header_len = len('Line Item') + 2
-            column_width = max(max_len, header_len)
-            worksheet.column_dimensions['A'].width = column_width
+            # 2. Autofit the other columns (B, C, D...) based on data and header length
+            for i, col in enumerate(df.columns):
+                # Find length of header and the longest formatted number in the column
+                # Add 2 for padding
+                header_len = len(str(col))
+                # Format numbers like '1,234.5' to get their string length
+                max_len_data = df[col].apply(lambda x: len(f"{x:,.1f}")).max()
+                column_width = max(header_len, max_len_data) + 2
+                # Set column width for B, C, D... (offset by 1 because of the index column)
+                worksheet.set_column(i + 1, i + 1, column_width)
 
         writer.close()
         output.seek(0)
@@ -127,7 +133,6 @@ def export_to_excel():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        # Log the full traceback for better debugging on the server side
         import traceback
         app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
         return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
