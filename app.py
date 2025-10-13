@@ -1,102 +1,123 @@
-# --- NEW CODE START: Required Imports and Flask App Initialization ---
-import pandas as pd
-from flask import Flask, request, jsonify, send_file
-from io import BytesIO
-import traceback
+from flask import Flask, request, jsonify, render_template, send_file 
+import pandas as pd 
+from io import BytesIO 
+from forecaster import generate_forecast
+from flask_cors import CORS 
 
-# You must define 'app' before using @app.route
-app = Flask(__name__) 
+app = Flask(
+    __name__,
+    template_folder='.',    
+    static_folder='.',      
+    static_url_path='/'     
+)
+CORS(app) 
 
-# Placeholder functions assumed to exist elsewhere in your original context
+@app.route('/')
+def home():
+    return render_template('index.html')   
+
 def get_inputs_from_request(data):
-    # This is a placeholder; replace with your actual logic if needed.
-    # For now, it just ensures the file loads without a NameError.
-    raise NotImplementedError("get_inputs_from_request needs to be defined.")
+    """Helper function to parse and convert inputs from request data."""
+    # Handle the list of revenue growth rates
+    revenue_growth_rates_str = data.get('revenue_growth_rates', [])
+    revenue_growth_rates = [float(rate) for rate in revenue_growth_rates_str]
 
-def generate_forecast(**inputs):
-    # This is a placeholder; replace with your actual logic if needed.
-    # For now, it just ensures the file loads without a NameError.
-    raise NotImplementedError("generate_forecast needs to be defined.")
-# --- NEW CODE END ---
+    # NEW: Handle the list of COGS percentage rates
+    cogs_pct_rates_str = data.get('cogs_pct_rates', [])
+    cogs_pct_rates = [float(rate) for rate in cogs_pct_rates_str]
 
+    inputs = {
+        "initial_revenue": float(data.get('initial_revenue')),
+        "revenue_growth_rates": revenue_growth_rates, 
+        "cogs_pct_rates": cogs_pct_rates, # MODIFIED: Pass the list of COGS rates
+        "fixed_opex": float(data.get('fixed_opex')),
+        "tax_rate": float(data.get('tax_rate')),
+        "initial_ppe": float(data.get('initial_ppe')),
+        "capex": float(data.get('capex')),
+        "depreciation_rate": float(data.get('depreciation_rate')),
+        "dso_days": float(data.get('dso_days')), 
+        "dio_days": float(data.get('dio_days')), 
+        "dpo_days": float(data.get('dpo_days')), 
+        "initial_debt": float(data.get('initial_debt')), 
+        "initial_cash": float(data.get('initial_cash')),
+        "interest_rate": float(data.get('interest_rate')),
+        "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)),
+        "years": int(data.get('years', 3))
+    }
+    return inputs
+
+@app.route('/api/forecast', methods=['POST'])
+def forecast():
+    data = request.json
+    try:
+        inputs = get_inputs_from_request(data)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid number format received."}), 400
+
+    forecast_results = generate_forecast(**inputs)
+    return jsonify(forecast_results)
 
 @app.route('/api/export', methods=['POST'])
-def export_to_excel():
+def export_forecast():
+    data = request.json
     try:
-        data = request.json
         inputs = get_inputs_from_request(data)
-        
-        forecast_results = generate_forecast(**inputs)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid number format received."}), 400
+    
+    forecast_results = generate_forecast(**inputs)
+    
+    output = BytesIO()
+    num_years = inputs['years'] 
+    is_cfs_years = [f'Year {i}' for i in range(1, num_years + 1)]
+    bs_years = ['Year 0'] + is_cfs_years
 
-        output = BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         
-        # Prepare DataFrames for Excel
-        is_cfs_years = [f"Year {y}" for y in forecast_results['Years'][1:]]
-        bs_years = [f"Year {y}" for y in forecast_results['Years']]
-        bs_years[0] = 'Year 0 (Initial)'
-        
-        # Transpose DataFrames for correct orientation in Excel
-        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years).T
-        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
-        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
-        
-        # --- PREVIOUS FIX: Explicitly set the index name to prevent TypeError in autofit logic ---
-        df_is.index.name = 'Line Item'
-        df_bs.index.name = 'Line Item'
-        df_cfs.index.name = 'Line Item'
-        # --- END PREVIOUS FIX ---
-
-        # Write DataFrames to Excel sheets
-        df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
-            index_label='Line Item', float_format='%.1f')
-        df_bs.to_excel(writer, sheet_name='Balance Sheet', startrow=0, header=True, 
-            index_label='Line Item', float_format='%.1f')
-        df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
+        # --- FIX 1: Income Statement ---
+        # Initialize DataFrame with the Line Item data, setting years as the index.
+        # This makes Line Items the columns. Transposing (df_is.T) fixes the format.
+        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years) 
+        df_is.T.to_excel(writer, sheet_name='Income Statement', startrow=1, header=True, 
             index_label='Line Item', float_format='%.1f')
         
-        # Autofit column logic
-        for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
-            # --- NEW: Safety check for empty dataframes ---
-            if df.empty:
-                continue # Skip autofitting if the sheet is empty
-
-            worksheet = writer.sheets[sheet_name]
-            
-            # 1. Autofit the first column (A)
-            max_index_len = df.index.to_series().astype(str).str.len().max()
-            col_a_width = max(max_index_len, len('Line Item')) + 2
-            worksheet.set_column('A:A', col_a_width)
-
-            # 2. Autofit the data columns (B, C, D...)
-            for i, col in enumerate(df.columns):
-                # Safely calculate max length for data, handling non-numeric types
-                def get_len(val):
-                    if pd.isna(val):
-                        return 4 # for "N/A"
-                    try:
-                        return len(f"{val:,.1f}")
-                    except TypeError:
-                        return len(str(val))
-
-                header_len = len(str(col))
-                max_len_data = df[col].apply(get_len).max()
-                column_width = max(header_len, max_len_data) + 2
-                worksheet.set_column(i + 1, i + 1, column_width)
-
-        writer.close()
-        output.seek(0)
+        # --- FIX 2: Balance Sheet ---
+        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years) 
+        df_bs.T.to_excel(writer, sheet_name='Balance Sheet', startrow=1, header=True, 
+            index_label='Line Item', float_format='%.1f')
         
-        return send_file(
-            output, 
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name='Financial_Forecast.xlsx'
-        )
+        # --- FIX 3: Cash Flow Statement ---
+        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years) 
+        df_cfs.T.to_excel(writer, sheet_name='Cash Flow Statement', startrow=1, header=True, 
+            index_label='Line Item', float_format='%.1f')
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        import traceback
-        app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
-        return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
+        # FIX 4: Correct logic for column width based on line item length
+        line_items_is = list(forecast_results['excel_is'].keys())
+        line_items_bs = list(forecast_results['excel_bs'].keys())
+        line_items_cfs = list(forecast_results['excel_cfs'].keys())
+        
+        sheet_index_map_for_width = {
+            'Income Statement': line_items_is, 
+            'Balance Sheet': line_items_bs,
+            'Cash Flow Statement': line_items_cfs
+        }
+
+        for sheet_name, index_labels in sheet_index_map_for_width.items():
+            worksheet = writer.sheets[sheet_name] 
+            # Calculate width based on line item names, plus a buffer
+            max_len = max(len(str(s)) for s in index_labels) + 2 
+            header_len = len('Line Item') + 2
+            column_width = max(max_len, header_len)
+            worksheet.column_dimensions['A'].width = column_width
+
+    output.seek(0)
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name='Financial_Forecast.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
