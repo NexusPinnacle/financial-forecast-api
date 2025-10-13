@@ -19,6 +19,12 @@ def export_to_excel():
         df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
         df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
         
+        # --- FIX START: Explicitly set the index name to prevent TypeError in autofit logic ---
+        df_is.index.name = 'Line Item'
+        df_bs.index.name = 'Line Item'
+        df_cfs.index.name = 'Line Item'
+        # --- FIX END: The index name now matches the index_label used for export ---
+
         # Write DataFrames to Excel sheets
         df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
             index_label='Line Item', float_format='%.1f')
@@ -37,7 +43,22 @@ def export_to_excel():
             
             # 1. Autofit the first column (A)
             max_index_len = df.index.to_series().astype(str).str.len().max()
+            
+            # This line caused the error when df.index.name was None
+            # The error in the traceback was: col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
+            # The current code is:
             col_a_width = max(max_index_len, len('Line Item')) + 2
+            
+            # NOTE: If your actual live code was the one from the traceback (which uses df.index.name), 
+            # the index name must be set, which the fix above handles. 
+            # If your live code is exactly what was attached (using 'Line Item'), the traceback 
+            # must be from an older version. I'll proceed with the assumption that setting 
+            # df.index.name is the correct fix based on the *error message*. 
+            # In the code below, I'm using the fixed line which assumes df.index.name is set:
+            col_a_width = max(max_index_len, len(df.index.name or 'Line Item')) + 2 
+            # OR, using the value in the provided code snippet:
+            col_a_width = max(max_index_len, len('Line Item')) + 2
+
             worksheet.set_column('A:A', col_a_width)
 
             # 2. Autofit the data columns (B, C, D...)
