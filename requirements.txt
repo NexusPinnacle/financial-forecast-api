@@ -4,4 +4,5 @@ Flask-CORS
 pandas
 numpy
 openpyxl
+xlsxwriter
 # Add any other libraries like pandas, numpy, etc. if needed
