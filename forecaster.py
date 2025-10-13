@@ -170,7 +170,7 @@ def generate_forecast(
         "Net Income": net_income[1:], "Add: Depreciation": depreciation[1:],
         "Less: Change in NWC": change_in_nwc_cfs, 
         "Cash Flow from Operations": [net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, years + 1)],
-        "Cash Flow from Investing (CapEx)": [-x for x in capex_rates], # Corrected to use the list
+        "Cash Flow from Investing (CapEx)": [-x for x in capex_rates], # Already correctly sliced (length = years)
         "Cash Flow from Financing": cash_flow_from_financing[1:],
         "Net Change in Cash": net_change_in_cash[1:],
     }
@@ -191,7 +191,7 @@ def generate_forecast(
             "Interest Expense": interest_expense[1:], "EBT": ebt[1:], "Taxes": taxes[1:], "Net Income": net_income[1:],
         },
         "excel_bs": {
-            # FIX: Slice the lists to only include Year 1 onwards, aligning list length with IS/CFS
+            # FIX APPLIED: Slicing to Year 1 onwards ([1:]). Now all lists here have length 3.
             "Cash": cash_closing[1:], 
             "Accounts Receivable": ar_closing[1:], 
             "Inventory": inventory_closing[1:], 
@@ -201,7 +201,7 @@ def generate_forecast(
             "Retained Earnings": retained_earnings[1:],
         },
         "excel_bs_year0": { 
-            # ADDED: Separate dictionary for Year 0 initial balances
+            # Added: Dictionary for Year 0 (Initial) balances
             "Cash": cash_closing[0], 
             "Accounts Receivable": ar_closing[0], 
             "Inventory": inventory_closing[0], 
