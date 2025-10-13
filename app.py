@@ -5,7 +5,7 @@ from forecaster import generate_forecast
 from flask_cors import CORS 
 
 app = Flask(
-    __name__,
+    __name__,\
     template_folder='.',    
     static_folder='.',      
     static_url_path='/'     
@@ -18,106 +18,121 @@ def home():
 
 def get_inputs_from_request(data):
     """Helper function to parse and convert inputs from request data."""
-    # Handle the list of revenue growth rates
-    revenue_growth_rates_str = data.get('revenue_growth_rates', [])
-    revenue_growth_rates = [float(rate) for rate in revenue_growth_rates_str]
-
-    # NEW: Handle the list of COGS percentage rates
-    cogs_pct_rates_str = data.get('cogs_pct_rates', [])
-    cogs_pct_rates = [float(rate) for rate in cogs_pct_rates_str]
+    
+    # Helper to safely get and convert a list of strings to floats
+    def get_list_float(key):
+        list_str = data.get(key, [])
+        return [float(rate) for rate in list_str]
 
     inputs = {
         "initial_revenue": float(data.get('initial_revenue')),
-        "revenue_growth_rates": revenue_growth_rates, 
-        "cogs_pct_rates": cogs_pct_rates, # MODIFIED: Pass the list of COGS rates
-        "fixed_opex": float(data.get('fixed_opex')),
         "tax_rate": float(data.get('tax_rate')),
         "initial_ppe": float(data.get('initial_ppe')),
-        "capex": float(data.get('capex')),
         "depreciation_rate": float(data.get('depreciation_rate')),
-        "dso_days": float(data.get('dso_days')), 
-        "dio_days": float(data.get('dio_days')), 
-        "dpo_days": float(data.get('dpo_days')), 
-        "initial_debt": float(data.get('initial_debt')), 
+        "initial_debt": float(data.get('initial_debt')),
         "initial_cash": float(data.get('initial_cash')),
         "interest_rate": float(data.get('interest_rate')),
-        "annual_debt_repayment": float(data.get('annual_debt_repayment', 0.0)),
-        "years": int(data.get('years', 3))
+        "years": int(data.get('years', 3)),
+        
+        # GRANULAR LISTS - New inputs matching the updated forecaster.py
+        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
+        "cogs_pct_rates": get_list_float('cogs_pct_rates'),
+        "fixed_opex_rates": get_list_float('fixed_opex_rates'),
+        "capex_rates": get_list_float('capex_rates'),
+        "dso_days_list": get_list_float('dso_days_list'),
+        "dio_days_list": get_list_float('dio_days_list'),
+        "dpo_days_list": get_list_float('dpo_days_list'),
+        "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
     }
+    
+    # Validation to catch missing data early
+    for key, value in inputs.items():
+        if value is None or (isinstance(value, list) and not value):
+             raise ValueError(f"Missing or invalid input data for: {key}")
+
     return inputs
 
 @app.route('/api/forecast', methods=['POST'])
 def forecast():
-    data = request.json
     try:
+        data = request.json
         inputs = get_inputs_from_request(data)
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid number format received."}), 400
-
-    forecast_results = generate_forecast(**inputs)
-    return jsonify(forecast_results)
+        
+        forecast_results = generate_forecast(**inputs)
+        
+        return jsonify(forecast_results)
+    
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        # Log the full traceback for better debugging on the server side
+        import traceback
+        app.logger.error(f"An internal error occurred: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": f"Internal Server Error during calculation: {e}"}), 500
 
 @app.route('/api/export', methods=['POST'])
-def export_forecast():
-    data = request.json
+def export_to_excel():
     try:
+        data = request.json
         inputs = get_inputs_from_request(data)
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid number format received."}), 400
-    
-    forecast_results = generate_forecast(**inputs)
-    
-    output = BytesIO()
-    num_years = inputs['years'] 
-    is_cfs_years = [f'Year {i}' for i in range(1, num_years + 1)]
-    bs_years = ['Year 0'] + is_cfs_years
-
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         
-        # --- FIX 1: Income Statement ---
-        # Initialize DataFrame with the Line Item data, setting years as the index.
-        # This makes Line Items the columns. Transposing (df_is.T) fixes the format.
-        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years) 
-        df_is.T.to_excel(writer, sheet_name='Income Statement', startrow=1, header=True, 
+        forecast_results = generate_forecast(**inputs)
+
+        output = BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        
+        # Prepare DataFrames for Excel
+        is_cfs_years = [f"Year {y}" for y in forecast_results['Years'][1:]]
+        bs_years = [f"Year {y}" for y in forecast_results['Years']]
+        bs_years[0] = 'Year 0 (Initial)'
+        
+        # Transpose DataFrames for correct orientation in Excel
+        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years).T
+        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
+        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
+        
+        # Write DataFrames to Excel sheets
+        df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
+            index_label='Line Item', float_format='%.1f')
+        df_bs.to_excel(writer, sheet_name='Balance Sheet', startrow=0, header=True, 
+            index_label='Line Item', float_format='%.1f')
+        df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
             index_label='Line Item', float_format='%.1f')
         
-        # --- FIX 2: Balance Sheet ---
-        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years) 
-        df_bs.T.to_excel(writer, sheet_name='Balance Sheet', startrow=1, header=True, 
-            index_label='Line Item', float_format='%.1f')
+        # --- FIX & AUTO FIT LOGIC ---
+        # Loop through each sheet to set column widths
+        for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
+            worksheet = writer.sheets[sheet_name]
+            
+            # 1. Autofit the first column (A) based on the length of the line items
+            # Add 2 for padding
+            col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
+            worksheet.set_column('A:A', col_a_width)
+
+            # 2. Autofit the other columns (B, C, D...) based on data and header length
+            for i, col in enumerate(df.columns):
+                # Find length of header and the longest formatted number in the column
+                # Add 2 for padding
+                header_len = len(str(col))
+                # Format numbers like '1,234.5' to get their string length
+                max_len_data = df[col].apply(lambda x: len(f"{x:,.1f}")).max()
+                column_width = max(header_len, max_len_data) + 2
+                # Set column width for B, C, D... (offset by 1 because of the index column)
+                worksheet.set_column(i + 1, i + 1, column_width)
+
+        writer.close()
+        output.seek(0)
         
-        # --- FIX 3: Cash Flow Statement ---
-        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years) 
-        df_cfs.T.to_excel(writer, sheet_name='Cash Flow Statement', startrow=1, header=True, 
-            index_label='Line Item', float_format='%.1f')
+        return send_file(
+            output, 
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='Financial_Forecast.xlsx'
+        )
 
-        # FIX 4: Correct logic for column width based on line item length
-        line_items_is = list(forecast_results['excel_is'].keys())
-        line_items_bs = list(forecast_results['excel_bs'].keys())
-        line_items_cfs = list(forecast_results['excel_cfs'].keys())
-        
-        sheet_index_map_for_width = {
-            'Income Statement': line_items_is, 
-            'Balance Sheet': line_items_bs,
-            'Cash Flow Statement': line_items_cfs
-        }
-
-        for sheet_name, index_labels in sheet_index_map_for_width.items():
-            worksheet = writer.sheets[sheet_name] 
-            # Calculate width based on line item names, plus a buffer
-            max_len = max(len(str(s)) for s in index_labels) + 2 
-            header_len = len('Line Item') + 2
-            column_width = max(max_len, header_len)
-            worksheet.column_dimensions['A'].width = column_width
-
-    output.seek(0)
-    
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name='Financial_Forecast.xlsx',
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        import traceback
+        app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
