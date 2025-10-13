@@ -183,7 +183,8 @@ def generate_forecast(
         "Closing Cash": cash_closing, "Closing AR": ar_closing, "Closing Inventory": inventory_closing,
         "Closing PP&E": ppe_closing, "Closing AP": ap_closing,
         "Closing Debt": debt_closing, "Closing RE": retained_earnings,
-        "NWC": nwc_closing, "Change in NWC": change_in_nwc,
+        "NWC": nwc_closing, 
+        "Change in NWC": change_in_nwc[1:], # FIX: Sliced to remove non-meaningful Year 0 value.
         # Data for Excel export
         "excel_is": {
             "Revenue": revenue[1:], "COGS": cogs[1:], "Gross Profit": gross_profit[1:],
@@ -191,7 +192,6 @@ def generate_forecast(
             "Interest Expense": interest_expense[1:], "EBT": ebt[1:], "Taxes": taxes[1:], "Net Income": net_income[1:],
         },
         "excel_bs": {
-            # FIX APPLIED: Slicing to Year 1 onwards ([1:]). Now all lists here have length 3.
             "Cash": cash_closing[1:], 
             "Accounts Receivable": ar_closing[1:], 
             "Inventory": inventory_closing[1:], 
@@ -201,7 +201,6 @@ def generate_forecast(
             "Retained Earnings": retained_earnings[1:],
         },
         "excel_bs_year0": { 
-            # Added: Dictionary for Year 0 (Initial) balances
             "Cash": cash_closing[0], 
             "Accounts Receivable": ar_closing[0], 
             "Inventory": inventory_closing[0], 
@@ -211,8 +210,8 @@ def generate_forecast(
             "Retained Earnings": retained_earnings[0],
         },
         "excel_cfs": cfs_data,
-        "Cash Flow from Financing": cash_flow_from_financing, 
-        "Net Change in Cash": net_change_in_cash, 
+        "Cash Flow from Financing": cash_flow_from_financing[1:], # FIX: Sliced to remove non-meaningful Year 0 value.
+        "Net Change in Cash": net_change_in_cash[1:],             # FIX: Sliced to remove non-meaningful Year 0 value.
     }
     
     return results
