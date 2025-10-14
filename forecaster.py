@@ -170,7 +170,7 @@ def generate_forecast(
         "Net Income": net_income[1:], "Add: Depreciation": depreciation[1:],
         "Less: Change in NWC": change_in_nwc_cfs, 
         "Cash Flow from Operations": [net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, years + 1)],
-        "Cash Flow from Investing (CapEx)": [-x for x in capex_rates], # Already correctly sliced (length = years)
+        "Cash Flow from Investing (CapEx)": [-x for x in capex_rates], # Corrected to use the list
         "Cash Flow from Financing": cash_flow_from_financing[1:],
         "Net Change in Cash": net_change_in_cash[1:],
     }
@@ -183,8 +183,7 @@ def generate_forecast(
         "Closing Cash": cash_closing, "Closing AR": ar_closing, "Closing Inventory": inventory_closing,
         "Closing PP&E": ppe_closing, "Closing AP": ap_closing,
         "Closing Debt": debt_closing, "Closing RE": retained_earnings,
-        "NWC": nwc_closing, 
-        "Change in NWC": change_in_nwc[1:], # FIX: Sliced to remove non-meaningful Year 0 value.
+        "NWC": nwc_closing, "Change in NWC": change_in_nwc,
         # Data for Excel export
         "excel_is": {
             "Revenue": revenue[1:], "COGS": cogs[1:], "Gross Profit": gross_profit[1:],
@@ -192,26 +191,13 @@ def generate_forecast(
             "Interest Expense": interest_expense[1:], "EBT": ebt[1:], "Taxes": taxes[1:], "Net Income": net_income[1:],
         },
         "excel_bs": {
-            "Cash": cash_closing[1:], 
-            "Accounts Receivable": ar_closing[1:], 
-            "Inventory": inventory_closing[1:], 
-            "Net PP&E": ppe_closing[1:], 
-            "Accounts Payable": ap_closing[1:], 
-            "Debt": debt_closing[1:],
-            "Retained Earnings": retained_earnings[1:],
-        },
-        "excel_bs_year0": { 
-            "Cash": cash_closing[0], 
-            "Accounts Receivable": ar_closing[0], 
-            "Inventory": inventory_closing[0], 
-            "Net PP&E": ppe_closing[0], 
-            "Accounts Payable": ap_closing[0], 
-            "Debt": debt_closing[0],
-            "Retained Earnings": retained_earnings[0],
+            "Cash": cash_closing, "Accounts Receivable": ar_closing, "Inventory": inventory_closing, 
+            "Net PP&E": ppe_closing, "Accounts Payable": ap_closing, "Debt": debt_closing,
+            "Retained Earnings": retained_earnings,
         },
         "excel_cfs": cfs_data,
-        "Cash Flow from Financing": cash_flow_from_financing[1:], # FIX: Sliced to remove non-meaningful Year 0 value.
-        "Net Change in Cash": net_change_in_cash[1:],             # FIX: Sliced to remove non-meaningful Year 0 value.
+        "Cash Flow from Financing": cash_flow_from_financing, 
+        "Net Change in Cash": net_change_in_cash, 
     }
     
     return results
