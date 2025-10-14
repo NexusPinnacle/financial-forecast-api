@@ -196,8 +196,13 @@ def generate_forecast(
             "Retained Earnings": retained_earnings,
         },
         "excel_cfs": cfs_data,
-        "Cash Flow from Financing": cash_flow_from_financing, 
-        "Net Change in Cash": net_change_in_cash, 
+        # --- FIX APPLIED HERE ---
+        # The top-level lists related to CFS/IS were using the full (years + 1) list.
+        # We slice them to only include the forecast years (Year 1 to Year N) for consistency,
+        # and rename them to avoid collision with the 'excel_cfs' keys.
+        "Cash Flow from Financing Forecast": cash_flow_from_financing[1:], 
+        "Net Change in Cash Forecast": net_change_in_cash[1:], 
+        # ------------------------
     }
     
     return results
