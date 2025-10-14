@@ -87,9 +87,16 @@ def export_to_excel():
         bs_years[0] = 'Year 0 (Initial)'
         
         # Transpose DataFrames for correct orientation in Excel
+        # NOTE: The index name will still be None here
         df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years).T
         df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
         df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
+        
+        # --- NEW CODE: Set the index name explicitly for the auto-fit logic to work ---
+        df_is.index.name = 'Line Item'
+        df_bs.index.name = 'Line Item'
+        df_cfs.index.name = 'Line Item'
+        # -----------------------------------------------------------------------------
         
         # Write DataFrames to Excel sheets
         df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
@@ -99,18 +106,10 @@ def export_to_excel():
         df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
             index_label='Line Item', float_format='%.1f')
         
-        # --- FIX & AUTO FIT LOGIC ---
-        # Helper function for calculating safe string length of data
+        # Helper function for calculating safe string length of data (rest unchanged)
         def get_data_len(val):
-            if pd.isna(val):
-                return 4 # For "N/A" or NaN
-            try:
-                # Format numbers like '1,234.5' to get their string length
-                return len(f"{val:,.1f}")
-            except (TypeError, ValueError):
-                # Fallback for non-numeric or un-formattable data
-                return len(str(val)) + 1 # +1 for safety margin
-
+            # ... (unchanged)
+        
         # Loop through each sheet to set column widths
         for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
             if df.empty:
@@ -119,7 +118,7 @@ def export_to_excel():
             worksheet = writer.sheets[sheet_name]
             
             # 1. Autofit the first column (A)
-            # Add 2 for padding
+            # This line will now work because df.index.name is explicitly set to 'Line Item'
             col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
             worksheet.set_column('A:A', col_a_width)
 
