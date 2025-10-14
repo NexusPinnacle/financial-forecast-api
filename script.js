@@ -339,7 +339,7 @@ function renderResults(data, currencySymbol) {
         });
     };
     
-    // Data definitions for rendering tables
+     // Data definitions for rendering tables
     const forecastData = [
         // Income Statement
         { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
@@ -368,9 +368,34 @@ function renderResults(data, currencySymbol) {
         { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
-        { label: "Cash Flow from Operations", calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Investing (CapEx)", calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], tableBody: cashFlowBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Cash Flow from Financing", dataKey: "Cash Flow from Financing", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { 
+            // This calculation is necessary because the top-level Net Income, Depreciation, and Change in NWC lists 
+            // are length (Years + 1) and need slicing/arithmetic to match the CFS line item.
+            label: "Cash Flow from Operations", 
+            calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+        { 
+            // FIX 1: Use the data directly from the 'excel_cfs' dictionary, which is guaranteed to be Year 1 to N
+            label: "Cash Flow from Investing (CapEx)", 
+            calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+        { 
+            // FIX 2: Use the data directly from the 'excel_cfs' dictionary for Cash Flow from Financing
+            label: "Cash Flow from Financing", 
+            calculation: (d) => d['excel_cfs']['Cash Flow from Financing'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
         { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
     ];
     
