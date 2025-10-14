@@ -1,31 +1,80 @@
-from flask import Flask, request, jsonify, send_file
-from io import BytesIO
-import pandas as pd
-# Assuming forecaster.py is in the same directory or accessible
-from forecaster import generate_forecast 
+from flask import Flask, request, jsonify, render_template, send_file 
+import pandas as pd 
+from io import BytesIO 
+from forecaster import generate_forecast
+from flask_cors import CORS 
 
-# --- FIX: Initialize the Flask application instance ---
-app = Flask(__name__) 
+app = Flask(
+    __name__,\
+    template_folder='.',    
+    static_folder='.',      
+    static_url_path='/'     
+)
+CORS(app) 
 
-# Helper function placeholder (must exist for app.py to run, assuming it's imported or defined elsewhere)
-# Since the original file didn't include it, I'll add a minimal placeholder import
-# If get_inputs_from_request is in another file, you should import it. 
-# For this fix, I'll assume standard Flask imports are needed.
+@app.route('/')
+def home():
+    return render_template('index.html')   
 
-# You will need to define or import this function:
-# def get_inputs_from_request(data):
-#     # ... logic to pull forecast inputs from the JSON data ...
-#     return { ... } 
-# Assuming it's defined/imported, the rest of the file is fine.
+def get_inputs_from_request(data):
+    """Helper function to parse and convert inputs from request data."""
+    
+    # Helper to safely get and convert a list of strings to floats
+    def get_list_float(key):
+        list_str = data.get(key, [])
+        return [float(rate) for rate in list_str]
 
-# The original content of app.py starts here:
+    inputs = {
+        "initial_revenue": float(data.get('initial_revenue')),
+        "tax_rate": float(data.get('tax_rate')),
+        "initial_ppe": float(data.get('initial_ppe')),
+        "depreciation_rate": float(data.get('depreciation_rate')),
+        "initial_debt": float(data.get('initial_debt')),
+        "initial_cash": float(data.get('initial_cash')),
+        "interest_rate": float(data.get('interest_rate')),
+        "years": int(data.get('years', 3)),
+        
+        # GRANULAR LISTS - New inputs matching the updated forecaster.py
+        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
+        "cogs_pct_rates": get_list_float('cogs_pct_rates'),
+        "fixed_opex_rates": get_list_float('fixed_opex_rates'),
+        "capex_rates": get_list_float('capex_rates'),
+        "dso_days_list": get_list_float('dso_days_list'),
+        "dio_days_list": get_list_float('dio_days_list'),
+        "dpo_days_list": get_list_float('dpo_days_list'),
+        "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
+    }
+    
+    # Validation to catch missing data early
+    for key, value in inputs.items():
+        if value is None or (isinstance(value, list) and not value):
+             raise ValueError(f"Missing or invalid input data for: {key}")
+
+    return inputs
+
+@app.route('/api/forecast', methods=['POST'])
+def forecast():
+    try:
+        data = request.json
+        inputs = get_inputs_from_request(data)
+        
+        forecast_results = generate_forecast(**inputs)
+        
+        return jsonify(forecast_results)
+    
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        # Log the full traceback for better debugging on the server side
+        import traceback
+        app.logger.error(f"An internal error occurred: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": f"Internal Server Error during calculation: {e}"}), 500
+
 @app.route('/api/export', methods=['POST'])
 def export_to_excel():
     try:
         data = request.json
-        # NOTE: If 'get_inputs_from_request' is not defined, you'll need to define it 
-        # or import it, but the NameError was specifically for 'app'.
-        inputs = get_inputs_from_request(data) 
+        inputs = get_inputs_from_request(data)
         
         forecast_results = generate_forecast(**inputs)
 
@@ -50,33 +99,25 @@ def export_to_excel():
         df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
             index_label='Line Item', float_format='%.1f')
         
-        # Autofit column logic
+        # --- FIX & AUTO FIT LOGIC ---
+        # Loop through each sheet to set column widths
         for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
-            # --- NEW: Safety check for empty dataframes ---
-            if df.empty:
-                continue # Skip autofitting if the sheet is empty
-
             worksheet = writer.sheets[sheet_name]
             
-            # 1. Autofit the first column (A)
-            max_index_len = df.index.to_series().astype(str).str.len().max()
-            col_a_width = max(max_index_len, len('Line Item')) + 2
+            # 1. Autofit the first column (A) based on the length of the line items
+            # Add 2 for padding
+            col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
             worksheet.set_column('A:A', col_a_width)
 
-            # 2. Autofit the data columns (B, C, D...)
+            # 2. Autofit the other columns (B, C, D...) based on data and header length
             for i, col in enumerate(df.columns):
-                # Safely calculate max length for data, handling non-numeric types
-                def get_len(val):
-                    if pd.isna(val):
-                        return 4 # for "N/A"
-                    try:
-                        return len(f"{val:,.1f}")
-                    except TypeError:
-                        return len(str(val))
-
+                # Find length of header and the longest formatted number in the column
+                # Add 2 for padding
                 header_len = len(str(col))
-                max_len_data = df[col].apply(get_len).max()
+                # Format numbers like '1,234.5' to get their string length
+                max_len_data = df[col].apply(lambda x: len(f"{x:,.1f}")).max()
                 column_width = max(header_len, max_len_data) + 2
+                # Set column width for B, C, D... (offset by 1 because of the index column)
                 worksheet.set_column(i + 1, i + 1, column_width)
 
         writer.close()
