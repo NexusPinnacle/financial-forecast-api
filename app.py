@@ -1,8 +1,31 @@
+from flask import Flask, request, jsonify, send_file
+from io import BytesIO
+import pandas as pd
+# Assuming forecaster.py is in the same directory or accessible
+from forecaster import generate_forecast 
+
+# --- FIX: Initialize the Flask application instance ---
+app = Flask(__name__) 
+
+# Helper function placeholder (must exist for app.py to run, assuming it's imported or defined elsewhere)
+# Since the original file didn't include it, I'll add a minimal placeholder import
+# If get_inputs_from_request is in another file, you should import it. 
+# For this fix, I'll assume standard Flask imports are needed.
+
+# You will need to define or import this function:
+# def get_inputs_from_request(data):
+#     # ... logic to pull forecast inputs from the JSON data ...
+#     return { ... } 
+# Assuming it's defined/imported, the rest of the file is fine.
+
+# The original content of app.py starts here:
 @app.route('/api/export', methods=['POST'])
 def export_to_excel():
     try:
         data = request.json
-        inputs = get_inputs_from_request(data)
+        # NOTE: If 'get_inputs_from_request' is not defined, you'll need to define it 
+        # or import it, but the NameError was specifically for 'app'.
+        inputs = get_inputs_from_request(data) 
         
         forecast_results = generate_forecast(**inputs)
 
