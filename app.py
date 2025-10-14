@@ -1,20 +1,20 @@
-from flask import Flask, request, jsonify, render_template, send_file 
-import pandas as pd 
-from io import BytesIO 
+from flask import Flask, request, jsonify, render_template, send_file
+import pandas as pd
+from io import BytesIO
 from forecaster import generate_forecast
-from flask_cors import CORS 
+from flask_cors import CORS
 
 app = Flask(
-    __name__,\
+    __name__,
     template_folder='.',    
     static_folder='.',      
     static_url_path='/'     
 )
-CORS(app) 
+CORS(app)
 
 @app.route('/')
 def home():
-    return render_template('index.html')   
+    return render_template('index.html')    
 
 def get_inputs_from_request(data):
     """Helper function to parse and convert inputs from request data."""
@@ -48,7 +48,7 @@ def get_inputs_from_request(data):
     # Validation to catch missing data early
     for key, value in inputs.items():
         if value is None or (isinstance(value, list) and not value):
-             raise ValueError(f"Missing or invalid input data for: {key}")
+            raise ValueError(f"Missing or invalid input data for: {key}")
 
     return inputs
 
@@ -100,25 +100,38 @@ def export_to_excel():
             index_label='Line Item', float_format='%.1f')
         
         # --- FIX & AUTO FIT LOGIC ---
+        # Helper function for calculating safe string length of data
+        def get_data_len(val):
+            if pd.isna(val):
+                return 4 # For "N/A" or NaN
+            try:
+                # Format numbers like '1,234.5' to get their string length
+                return len(f"{val:,.1f}")
+            except (TypeError, ValueError):
+                # Fallback for non-numeric or un-formattable data
+                return len(str(val)) + 1 # +1 for safety margin
+
         # Loop through each sheet to set column widths
         for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
+            if df.empty:
+                continue
+                
             worksheet = writer.sheets[sheet_name]
             
-            # 1. Autofit the first column (A) based on the length of the line items
+            # 1. Autofit the first column (A)
             # Add 2 for padding
             col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
             worksheet.set_column('A:A', col_a_width)
 
-            # 2. Autofit the other columns (B, C, D...) based on data and header length
+            # 2. Autofit the other columns (B, C, D...)
             for i, col in enumerate(df.columns):
-                # Find length of header and the longest formatted number in the column
-                # Add 2 for padding
                 header_len = len(str(col))
-                # Format numbers like '1,234.5' to get their string length
-                max_len_data = df[col].apply(lambda x: len(f"{x:,.1f}")).max()
-                column_width = max(header_len, max_len_data) + 2
+                # Apply the safe length calculation helper
+                max_len_data = df[col].apply(get_data_len).max()
+                column_width = max(header_len, max_len_data) + 1 # +1 for slight margin
                 # Set column width for B, C, D... (offset by 1 because of the index column)
                 worksheet.set_column(i + 1, i + 1, column_width)
+        # --- END FIX & AUTO FIT LOGIC ---
 
         writer.close()
         output.seek(0)
