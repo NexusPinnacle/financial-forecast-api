@@ -369,8 +369,7 @@ function renderResults(data, currencySymbol) {
         { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
         { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
         { 
-            // This calculation is necessary because the top-level Net Income, Depreciation, and Change in NWC lists 
-            // are length (Years + 1) and need slicing/arithmetic to match the CFS line item.
+            // Cash Flow from Operations is calculated here because its components are at the top-level
             label: "Cash Flow from Operations", 
             calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), 
             tableBody: cashFlowBody, 
@@ -379,7 +378,6 @@ function renderResults(data, currencySymbol) {
             customClass: 'heavy-total-row' 
         },
         { 
-            // FIX 1: Use the data directly from the 'excel_cfs' dictionary, which is guaranteed to be Year 1 to N
             label: "Cash Flow from Investing (CapEx)", 
             calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], 
             tableBody: cashFlowBody, 
@@ -388,7 +386,6 @@ function renderResults(data, currencySymbol) {
             customClass: 'heavy-total-row' 
         },
         { 
-            // FIX 2: Use the data directly from the 'excel_cfs' dictionary for Cash Flow from Financing
             label: "Cash Flow from Financing", 
             calculation: (d) => d['excel_cfs']['Cash Flow from Financing'], 
             tableBody: cashFlowBody, 
@@ -396,7 +393,15 @@ function renderResults(data, currencySymbol) {
             isBold: true, 
             customClass: 'heavy-total-row' 
         },
-        { label: "Net Change in Cash", dataKey: "Net Change in Cash", tableBody: cashFlowBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { 
+            // FIX: Use the data directly from the 'excel_cfs' dictionary, which is guaranteed to be Year 1 to N
+            label: "Net Change in Cash", 
+            calculation: (d) => d['excel_cfs']['Net Change in Cash'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
     ];
     
     forecastData.forEach(insertDataRow); 
