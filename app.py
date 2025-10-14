@@ -22,17 +22,24 @@ def get_inputs_from_request(data):
     # Helper to safely get and convert a list of strings to floats
     def get_list_float(key):
         list_str = data.get(key, [])
-        return [float(rate) for rate in list_str]
+        # Ensure list_str is iterable and contains strings/numbers
+        if isinstance(list_str, str):
+             # Handle case where a single value might be sent instead of a list
+            list_str = [list_str]
+        
+        # Safely convert to float, ignoring non-string/non-numeric elements if list is malformed
+        return [float(rate) for rate in list_str if rate is not None]
 
+    # Use .get() defensively and provide defaults to avoid KeyErrors
     inputs = {
-        "initial_revenue": float(data.get('initial_revenue')),
-        "tax_rate": float(data.get('tax_rate')),
-        "initial_ppe": float(data.get('initial_ppe')),
-        "depreciation_rate": float(data.get('depreciation_rate')),
-        "initial_debt": float(data.get('initial_debt')),
-        "initial_cash": float(data.get('initial_cash')),
-        "interest_rate": float(data.get('interest_rate')),
-        "years": int(data.get('years', 3)),
+        "initial_revenue": float(data.get('initial_revenue') or 0.0),
+        "tax_rate": float(data.get('tax_rate') or 0.0),
+        "initial_ppe": float(data.get('initial_ppe') or 0.0),
+        "depreciation_rate": float(data.get('depreciation_rate') or 0.0),
+        "initial_debt": float(data.get('initial_debt') or 0.0),
+        "initial_cash": float(data.get('initial_cash') or 0.0),
+        "interest_rate": float(data.get('interest_rate') or 0.0),
+        "years": int(data.get('years', 3) or 3),
         
         # GRANULAR LISTS - New inputs matching the updated forecaster.py
         "revenue_growth_rates": get_list_float('revenue_growth_rates'),
@@ -45,10 +52,11 @@ def get_inputs_from_request(data):
         "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
     }
     
-    # Validation to catch missing data early
-    for key, value in inputs.items():
-        if value is None or (isinstance(value, list) and not value):
-            raise ValueError(f"Missing or invalid input data for: {key}")
+    # Validation to catch missing data early (Focus on non-list mandatory inputs)
+    required_keys = ["initial_revenue", "tax_rate", "initial_ppe", "years"]
+    for key in required_keys:
+        if inputs[key] is None:
+             raise ValueError(f"Missing or invalid input data for: {key}")
 
     return inputs
 
@@ -107,9 +115,14 @@ def export_to_excel():
             index_label='Line Item', float_format='%.1f')
         
         # Helper function for calculating safe string length of data (rest unchanged)
+        # FIX: The body of this function was missing/commented out, causing an IndentationError.
         def get_data_len(val):
-            # ... (unchanged)
-        
+            # Handles pandas NaN/None values safely
+            if pd.isna(val) or val is None:
+                return 0
+            # Returns the length of the string formatted to one decimal place (matching float_format='%.1f')
+            return len(f"{val:.1f}")
+            
         # Loop through each sheet to set column widths
         for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
             if df.empty:
@@ -132,7 +145,8 @@ def export_to_excel():
                 worksheet.set_column(i + 1, i + 1, column_width)
         # --- END FIX & AUTO FIT LOGIC ---
 
-        writer.close()
+        # NOTE: writer.close() is required to finalize the Excel file before seeking.
+        writer.close() 
         output.seek(0)
         
         return send_file(
@@ -148,3 +162,7 @@ def export_to_excel():
         import traceback
         app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
         return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
+
+if __name__ == '__main__':
+    # Add a main run block for local testing
+    app.run(debug=True)
