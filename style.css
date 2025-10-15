@@ -270,3 +270,24 @@ thead th {
     max-height: 500px; 
     padding: 5px 10px 15px 10px; /* Adjusted padding */
 }
+
+
+/* --- Button Styling for Main Action Buttons --- */
+
+#calculateBtn {
+    /* Make the button take up 100% of the form's width */
+    width: 100%;
+    /* Ensure it behaves as a block element for full width behavior */
+    display: block; 
+    /* Add some margin to visually separate it from the input sections */
+    margin-top: 25px;
+    margin-bottom: 25px;
+}
+
+#exportBtn {
+    width: 100%;
+    display: block;
+    /* Apply specific export button color and margin */
+    background-color: #1e6f5c; 
+    margin-top: 20px;
+}
