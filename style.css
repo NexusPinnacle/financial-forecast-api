@@ -209,3 +209,64 @@ thead th {
     margin-top: 10px;
     align-items: center;
 }
+
+
+/* --- New Granular Horizontal Layout Styles --- */
+
+/* Container for all inputs in a granular category (e.g., all Revenue Growth years) */
+.granular-input-row {
+    display: flex;
+    flex-wrap: nowrap; /* Keep all years on one line */
+    overflow-x: auto; /* Allow horizontal scrolling if many years are selected (e.g., 10) */
+    gap: 10px; /* Spacing between year inputs */
+    padding: 10px 0;
+    border-bottom: 1px solid #eee; /* Separate different assumption types */
+}
+
+/* Individual year input block */
+.granular-year-input {
+    /* Set a minimum width for inputs to ensure they're usable */
+    min-width: 80px; 
+    display: flex;
+    flex-direction: column; /* Label on top, input below */
+    align-items: center;
+    flex-shrink: 0; /* Important: prevents items from shrinking too much on smaller screens */
+}
+
+/* Label for the entire row (e.g., "Revenue Growth") */
+.granular-row-label {
+    font-weight: bold;
+    margin: 5px 0 0 0;
+    padding-left: 5px;
+    border-left: 4px solid #3b84f5; /* Visual cue */
+}
+
+/* Style the year label inside the horizontal block */
+.granular-year-input label {
+    flex-basis: auto;
+    font-weight: normal;
+    font-size: 0.85em; /* Smaller label */
+    margin-bottom: 3px;
+    text-align: center;
+}
+
+/* Style the year input field inside the horizontal block */
+.granular-year-input input[type="number"] {
+    flex-basis: auto;
+    width: 65px; /* Fixed width for compactness */
+    text-align: center;
+    padding: 5px;
+    font-size: 0.9em;
+}
+
+/* Remove the redundant vertical input-group styling within the granular section */
+.collapsible-content .input-group {
+    /* This overrides the old vertical input-group style in the granular section */
+    display: none; 
+}
+
+/* Re-add specific padding for the content container for visual appeal */
+.collapsible-content.expanded-content {
+    max-height: 500px; 
+    padding: 5px 10px 15px 10px; /* Adjusted padding */
+}
