@@ -25,6 +25,8 @@ const debtRepaymentContainer = document.getElementById('debt-repayment-container
 let revenueChart = null;
 let cashDebtChart = null;
 
+JavaScript
+
 /**
  * Creates and populates year-specific vertical inputs for a single category.
  * @param {HTMLElement} container - The container element to populate.
@@ -37,6 +39,10 @@ let cashDebtChart = null;
  */
 function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
     container.innerHTML = ''; // Clear previous inputs
+    
+    // Create a horizontal wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'granular-input-row';
     
     // --- FIX: Add robust checking for default value element ---
     const defaultElement = document.getElementById(defaultValueId);
@@ -51,23 +57,33 @@ function createVerticalInputs(container, idPrefix, labelBase, years, defaultValu
     // -----------------------------------------------------------
 
     for (let i = 1; i <= years; i++) {
+        // Use a new class `granular-year-input` for styling the inline block
         const inputDiv = document.createElement('div');
-        inputDiv.className = 'input-group';
+        inputDiv.className = 'granular-year-input';
         
         const initialValue = defaultVal;
-        let labelText = `${labelBase} Year ${i} ${unit}:`;
+        let labelText = `Y${i}${unit.replace(/[\(\)]/g, '')}:`; // Simplified label for horizontal layout
         
         // Special case for the last year's label
         if (idPrefix === 'revenue_growth' && i === years && years < 10) {
-            labelText = `${labelBase} Year ${i} (and thereafter) ${unit}:`;
+            labelText = `Y${i}+${unit.replace(/[\(\)]/g, '')}:`; // Even simpler: Y3+
         }
 
+        // Use flex layout inside inputDiv
         inputDiv.innerHTML = `
             <label for="${idPrefix}_y${i}">${labelText}</label>
             <input type="number" id="${idPrefix}_y${i}" value="${initialValue}" step="${step}" required>
         `;
-        container.appendChild(inputDiv);
+        wrapper.appendChild(inputDiv);
     }
+    
+    // Insert the descriptive header label before the inputs
+    const descriptiveHeader = document.createElement('p');
+    descriptiveHeader.className = 'granular-row-label';
+    descriptiveHeader.textContent = labelBase;
+    
+    container.appendChild(descriptiveHeader);
+    container.appendChild(wrapper);
 }
 
 /**
