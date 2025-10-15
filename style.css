@@ -107,7 +107,7 @@ button:hover {
 
 /* Adjust button to span the full width of the main container again */
 #calculateBtn, #exportBtn {
-    width: calc(100% - 60px); /* 100% of max-width - padding on container */
+    width: calc(100%); /* 100% of max-width - padding on container */
     max-width: 1050px;
 }
 
