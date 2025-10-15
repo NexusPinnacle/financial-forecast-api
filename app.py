@@ -1,176 +1,487 @@
-from flask import Flask, request, jsonify, render_template, send_file
-import pandas as pd
-from io import BytesIO
-from forecaster import generate_forecast
-from flask_cors import CORS
+// API URLs
+const API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/forecast'; 
+const EXPORT_API_URL = 'https://financial-forecast-api-hyl3.onrender.com/api/export'; 
 
-app = Flask(
-    __name__,
-    template_folder='.',    
-    static_folder='.',      
-    static_url_path='/'     
-)
-CORS(app)
+// DOM Elements
+const form = document.getElementById('forecastForm');
+const resultsContainer = document.getElementById('results-container');
+const incomeStatementBody = document.querySelector('#incomeStatementTable tbody');
+const balanceSheetBody = document.querySelector('#balanceSheetTable tbody');
+const cashFlowBody = document.querySelector('#cashFlowTable tbody');
+const errorMessage = document.getElementById('error-message');
+const yearButtons = document.querySelectorAll('.year-select-btn');
+const forecastYearsInput = document.getElementById('forecast_years');
+// Granular assumption containers
+const revenueGrowthContainer = document.getElementById('revenue-growth-container');
+const cogsPctContainer = document.getElementById('cogs-pct-container');
+const fixedOpexContainer = document.getElementById('fixed-opex-container');
+const capexContainer = document.getElementById('capex-container');
+const dsoDaysContainer = document.getElementById('dso-days-container');
+const dioDaysContainer = document.getElementById('dio-days-container');
+const dpoDaysContainer = document.getElementById('dpo-days-container');
+const debtRepaymentContainer = document.getElementById('debt-repayment-container');
 
-@app.route('/')
-def home():
-    return render_template('index.html')    
+// Chart instances
+let revenueChart = null;
+let cashDebtChart = null;
 
-def get_inputs_from_request(data):
-    """Helper function to parse and convert inputs from request data."""
+/**
+ * Creates and populates year-specific vertical inputs for a single category.
+ * @param {HTMLElement} container - The container element to populate.
+ * @param {string} idPrefix - The prefix for the input IDs (e.g., "revenue_growth").
+ * @param {string} labelBase - The base text for the input label (e.g., "Revenue Growth").
+ * @param {number} years - The number of years to generate inputs for.
+ * @param {string} defaultValueId - The ID of the default input element.
+ * @param {string} step - The step attribute for the input (e.g., "0.1").
+ * @param {string} unit - The unit for the label (e.g., "(%)", "(Days)").
+ */
+function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
     
-    # Helper to safely get and convert a list of strings to floats
-    def get_list_float(key):
-        list_str = data.get(key, [])
-        # Ensure list_str is iterable and contains strings/numbers
-        if isinstance(list_str, str):
-             # Handle case where a single value might be sent instead of a list
-            list_str = [list_str]
-        
-        # Safely convert to float, ignoring non-string/non-numeric elements if list is malformed
-        return [float(rate) for rate in list_str if rate is not None]
-
-    # Use .get() defensively and provide defaults to avoid KeyErrors
-    inputs = {
-        "initial_revenue": float(data.get('initial_revenue') or 0.0),
-        "tax_rate": float(data.get('tax_rate') or 0.0),
-        "initial_ppe": float(data.get('initial_ppe') or 0.0),
-        "depreciation_rate": float(data.get('depreciation_rate') or 0.0),
-        "initial_debt": float(data.get('initial_debt') or 0.0),
-        "initial_cash": float(data.get('initial_cash') or 0.0),
-        "interest_rate": float(data.get('interest_rate') or 0.0),
-        "years": int(data.get('years', 3) or 3),
-        
-        # GRANULAR LISTS - New inputs matching the updated forecaster.py
-        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
-        "cogs_pct_rates": get_list_float('cogs_pct_rates'),
-        "fixed_opex_rates": get_list_float('fixed_opex_rates'),
-        "capex_rates": get_list_float('capex_rates'),
-        "dso_days_list": get_list_float('dso_days_list'),
-        "dio_days_list": get_list_float('dio_days_list'),
-        "dpo_days_list": get_list_float('dpo_days_list'),
-        "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
+    // CRITICAL FIX: Check if the container exists before manipulating it.
+    if (!container) {
+        console.error(`Granular input container element not found for ID prefix: ${idPrefix}. Check your HTML IDs.`);
+        return; 
     }
     
-    # Validation to catch missing data early (Focus on non-list mandatory inputs)
-    required_keys = ["initial_revenue", "tax_rate", "initial_ppe", "years"]
-    for key in required_keys:
-        if inputs[key] is None:
-             raise ValueError(f"Missing or invalid input data for: {key}")
-
-    return inputs
-
-@app.route('/api/forecast', methods=['POST'])
-def forecast():
-    try:
-        data = request.json
-        inputs = get_inputs_from_request(data)
-        
-        forecast_results = generate_forecast(**inputs)
-        
-        return jsonify(forecast_results)
+    container.innerHTML = ''; // Clear previous inputs
     
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        # Log the full traceback for better debugging on the server side
-        import traceback
-        app.logger.error(f"An internal error occurred: {e}\n{traceback.format_exc()}")
-        return jsonify({"error": f"Internal Server Error during calculation: {e}"}), 500
+    // --- Add robust checking for default value element ---
+    const defaultElement = document.getElementById(defaultValueId);
+    let defaultVal = 0; 
+    
+    if (defaultElement) {
+        defaultVal = parseFloat(defaultElement.value);
+    } else {
+        console.warn(`Default input element not found for ID: ${defaultValueId}. Using 0.`);
+    }
+    // -----------------------------------------------------------
 
-@app.route('/api/export', methods=['POST'])
-def export_to_excel():
-    try:
-        data = request.json
-        inputs = get_inputs_from_request(data)
+    // Create a horizontal wrapper for compact layout
+    const wrapper = document.createElement('div');
+    wrapper.className = 'granular-input-row';
+    
+    // Add a simple label/header for the row
+    const descriptiveHeader = document.createElement('p');
+    descriptiveHeader.className = 'granular-row-label';
+    descriptiveHeader.textContent = labelBase;
+    container.appendChild(descriptiveHeader);
+    
+    
+    for (let i = 1; i <= years; i++) {
+        const inputDiv = document.createElement('div');
+        // Use a simple container class for compact, in-line styling
+        inputDiv.className = 'granular-year-input'; 
         
-        forecast_results = generate_forecast(**inputs)
+        const initialValue = defaultVal;
+        
+        // Use a compact label (e.g., Y1, Y2)
+        let unitText = unit.replace(/[\(\)]/g, '');
+        let labelText = `Y${i}${unitText}:`; 
+        
+        // Special case for the last year's label (optional)
+        if (i === years && years < 10) {
+            labelText = `Y${i}+${unitText}:`; 
+        }
 
-        output = BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        inputDiv.innerHTML = `
+            <label for="${idPrefix}_y${i}">${labelText}</label>
+            <input type="number" id="${idPrefix}_y${i}" value="${initialValue}" step="${step}" required>
+        `;
+        wrapper.appendChild(inputDiv);
+    }
+    
+    container.appendChild(wrapper);
+}
+
+/**
+ * Generates all granular inputs using the vertical list layout.
+ * @param {number} years - The number of years to generate inputs for.
+ */
+function createAllGranularInputs(years) {
+    // All these calls rely on the existence of the default IDs in index.html, 
+    // which are now safely checked inside createVerticalInputs
+    createVerticalInputs(revenueGrowthContainer, 'revenue_growth', 'Revenue Growth', years, 'default_revenue_growth', '0.1', '(%)');
+    createVerticalInputs(cogsPctContainer, 'cogs_pct', 'COGS as % of Revenue', years, 'default_cogs_pct', '0.1', '(%)');
+    createVerticalInputs(fixedOpexContainer, 'fixed_opex', 'Fixed Opex', years, 'default_fixed_opex', '0.01', '');
+    createVerticalInputs(capexContainer, 'capex', 'CapEx', years, 'default_capex', '0.01', '');
+    createVerticalInputs(dsoDaysContainer, 'dso_days', 'DSO', years, 'default_dso_days', '1', '(Days)');
+    createVerticalInputs(dioDaysContainer, 'dio_days', 'DIO', years, 'default_dio_days', '1', '(Days)');
+    createVerticalInputs(dpoDaysContainer, 'dpo_days', 'DPO', years, 'default_dpo_days', '1', '(Days)');
+    createVerticalInputs(debtRepaymentContainer, 'debt_repayment', 'Debt Repayment', years, 'default_annual_debt_repayment', '0.01', '');
+}
+
+/**
+ * Toggles the collapse/expand state of a granular section.
+ * @param {Event} e - The click event.
+ */
+function toggleCollapse(e) {
+    let header = e.target.closest('.collapsible-header');
+    if (!header) return;
+
+    const targetId = header.getAttribute('data-target');
+    const content = document.getElementById(targetId);
+
+    if (content) {
+        // Toggle the 'collapsed' class on the header
+        header.classList.toggle('collapsed');
         
-        # Prepare DataFrames for Excel
-        is_cfs_years = [f"Year {y}" for y in forecast_results['Years'][1:]]
-        bs_years = [f"Year {y}" for y in forecast_results['Years']]
-        bs_years[0] = 'Year 0 (Initial)'
+        // Toggle the 'expanded-content' class on the content
+        content.classList.toggle('expanded-content');
+    }
+}
+
+
+// --- Event Listeners ---
+
+// Add listener to the right pane to handle all collapse clicks
+document.querySelector('.right-pane').addEventListener('click', toggleCollapse);
+
+
+// Handle clicks on 3, 5, 10 year duration buttons
+yearButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
+        button.classList.add('selected-year-btn');
         
-        # Transpose DataFrames for correct orientation in Excel
-        # NOTE: The index name will still be None here
-        df_is = pd.DataFrame(forecast_results['excel_is'], index=is_cfs_years).T
-        df_bs = pd.DataFrame(forecast_results['excel_bs'], index=bs_years).T
-        df_cfs = pd.DataFrame(forecast_results['excel_cfs'], index=is_cfs_years).T
+        const newYears = button.getAttribute('data-years');
+        forecastYearsInput.value = newYears;
+        const yearsInt = parseInt(newYears, 10);
         
-        # --- NEW CODE: Set the index name explicitly for the auto-fit logic to work ---
-        df_is.index.name = 'Line Item'
-        df_bs.index.name = 'Line Item'
-        df_cfs.index.name = 'Line Item'
-        # -----------------------------------------------------------------------------
+        // Regenerate all inputs for the new horizon size
+        createAllGranularInputs(yearsInt); 
+    });
+});
+
+// Event listeners to re-generate granular inputs if the default values change
+document.getElementById('default_revenue_growth').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_cogs_pct').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_fixed_opex').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_capex').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_dso_days').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_dio_days').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_dpo_days').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+document.getElementById('default_annual_debt_repayment').addEventListener('change', () => {
+    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+});
+
+// Main form submission for calculation
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleForecastRequest(API_URL);
+});
+
+// Export button click
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    await handleForecastRequest(EXPORT_API_URL, true);
+});
+
+/**
+ * Universal handler for both calculation and export requests.
+ * @param {string} url - The API endpoint to call.
+ * @param {boolean} isExport - Flag to determine if the request is for an Excel export.
+ */
+async function handleForecastRequest(url, isExport = false) {
+    errorMessage.textContent = isExport ? 'Generating Excel file...' : '';
+    
+    try {
+        const data = collectInputData();
         
-        # Write DataFrames to Excel sheets
-        df_is.to_excel(writer, sheet_name='Income Statement', startrow=0, header=True, 
-            index_label='Line Item', float_format='%.1f')
-        df_bs.to_excel(writer, sheet_name='Balance Sheet', startrow=0, header=True, 
-            index_label='Line Item', float_format='%.1f')
-        df_cfs.to_excel(writer, sheet_name='Cash Flow Statement', startrow=0, header=True, 
-            index_label='Line Item', float_format='%.1f')
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `API Error: ${response.statusText}`);
+        }
+
+        if (isExport) {
+            await handleFileDownload(response);
+        } else {
+            const result = await response.json();
+            renderResults(result, document.getElementById('currency_symbol')?.value || '$');
+        }
+
+    } catch (error) {
+        console.error("Client-side error:", error);
+        errorMessage.textContent = `Error: ${error.message}`;
+        if (!isExport) {
+            resultsContainer.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Gathers all data from the form inputs.
+ * @returns {object} The data object ready to be sent to the API.
+ */
+function collectInputData() {
+    const data = {};
+    const years = parseInt(forecastYearsInput.value, 10);
+    
+    // Helper to collect granular data lists
+    const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
+        const list = [];
+        const factor = isPercentage ? 100 : 1;
         
-        # Helper function for calculating safe string length of data (rest unchanged)
-        # FIX: The body of this function was missing/commented out, causing an IndentationError.
-        def get_data_len(val):
-            # Handles pandas NaN/None values safely
-            if pd.isna(val) or val is None:
-                return 0
-            # Returns the length of the string formatted to one decimal place (matching float_format='%.1f')
-            return len(f"{val:.1f}")
+        let defaultValue = 0; 
+        
+        const defaultElement = document.getElementById(defaultValueId);
+        if (defaultElement) {
+            defaultValue = parseFloat(defaultElement.value);
+        }
+
+
+        for (let i = 1; i <= years; i++) {
+            const input = document.getElementById(`${keyPrefix}_y${i}`);
             
-        # Loop through each sheet to set column widths
-        for sheet_name, df in [('Income Statement', df_is), ('Balance Sheet', df_bs), ('Cash Flow Statement', df_cfs)]:
-            if df.empty:
-                continue
-                
-            worksheet = writer.sheets[sheet_name]
+            const value = parseFloat(input?.value);
             
-            # 1. Autofit the first column (A)
-            # This line will now work because df.index.name is explicitly set to 'Line Item'
-            col_a_width = max(df.index.to_series().astype(str).str.len().max(), len(df.index.name)) + 2
-            worksheet.set_column('A:A', col_a_width)
+            // If the input value is invalid (NaN or empty string), use the default value.
+            const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
 
-            # 2. Autofit the other columns (B, C, D...)
-            for i, col in enumerate(df.columns):
-                header_len = len(str(col))
-                # Apply the safe length calculation helper
-                max_len_data = df[col].apply(get_data_len).max()
-                column_width = max(header_len, max_len_data) + 1 # +1 for slight margin
-                # Set column width for B, C, D... (offset by 1 because of the index column)
-                worksheet.set_column(i + 1, i + 1, column_width)
-        # --- END FIX & AUTO FIT LOGIC ---
+            list.push(finalValue / factor);
+        }
+        return list;
+    };
+    
+    // --- Collect all granular lists ---
+    data.revenue_growth_rates = collectList('revenue_growth', true, 'default_revenue_growth'); 
+    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
+    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
+    data.capex_rates = collectList('capex', false, 'default_capex'); 
+    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
+    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
+    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
+    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
 
-        # NOTE: writer.close() is required to finalize the Excel file before seeking.
-        writer.close() 
-        output.seek(0)
+    // Collect scalar inputs
+    data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
+    data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
+    data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
+    data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
+    data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
+    data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
+    data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
+    data.years = years;
+
+    // Validate all collected data 
+    for (const key in data) {
+        const value = data[key];
+        if (Array.isArray(value)) {
+            if (value.some(isNaN)) throw new Error(`Invalid number in list for ${key}.`);
+        } else {
+            if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
+        }
+    }
+    
+    return data;
+}
+
+/**
+ * Handles the logic for triggering a file download from a response.
+ * @param {Response} response The fetch response object.
+ */
+async function handleFileDownload(response) {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'Financial_Forecast.xlsx'; 
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    errorMessage.textContent = 'Excel file downloaded successfully.';
+}
+
+/**
+ * Renders the forecast results into HTML tables and charts.
+ * @param {object} data The forecast results from the backend.
+ * @param {string} currencySymbol The selected currency symbol.
+ */
+function renderResults(data, currencySymbol) {
+    [incomeStatementBody, balanceSheetBody, cashFlowBody].forEach(body => body.innerHTML = '');
+
+    const format = (value) => `${value < 0 ? '-' : ''}${currencySymbol}${Math.abs(value).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+    const allYears = data["Years"]; 
+    const is_cfs_years = allYears.slice(1); 
+    const bs_years = allYears; 
+    
+    // Dynamically create table headers
+    const tableConfigs = [
+        { id: 'incomeStatementTable', years: is_cfs_years },
+        { id: 'balanceSheetTable', years: bs_years },
+        { id: 'cashFlowTable', years: is_cfs_years } 
+    ];
+
+    tableConfigs.forEach(config => {
+        const thead = document.querySelector(`#${config.id} thead`);
+        thead.innerHTML = ''; 
+        const headerRow = thead.insertRow();
+        headerRow.insertCell().textContent = 'Line Item';
+        config.years.forEach(year => {
+            const cell = headerRow.insertCell();
+            cell.textContent = (config.id === 'balanceSheetTable' && year === 0) ? 'Year 0 (Initial)' : `Year ${year}`;
+        });
+    });
+
+    const insertDataRow = (config) => {
+        const row = config.tableBody.insertRow();
+        if (config.customClass) row.className = config.customClass;
+        if (config.isBold) row.style.fontWeight = 'bold';
+        row.insertCell().textContent = config.label;
         
-        return send_file(
-            output, 
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name='Financial_Forecast.xlsx'
-        )
+        let rowData = config.dataKey ? (data[config.dataKey] || []) : config.calculation(data);
+        const yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
+        const slicedData = rowData.slice(config.startIdx);
+        
+        yearsToRender.forEach((_, index) => {
+            const value = slicedData[index];
+            const cell = row.insertCell();
+            cell.textContent = (typeof value === 'number') ? format(config.isReversed ? -value : value) : '-';
+            cell.classList.add('data-cell');
+        });
+    };
+    
+     // Data definitions for rendering tables
+    const forecastData = [
+        // Income Statement
+        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
+        { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        import traceback
-        app.logger.error(f"An internal error occurred during export: {e}\n{traceback.format_exc()}")
-        return jsonify({"error": f"Internal Server Error during export: {e}"}), 500
+        // Balance Sheet
+        { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Net PP&E", dataKey: "Closing PP&E", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Total Assets", calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
+        { label: "Accounts Payable", dataKey: "Closing AP", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
+        { label: "Total Liabilities & Equity", calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
 
-if __name__ == '__main__':
-    # Add a main run block for local testing
-    app.run(debug=True)
+        // Cash Flow Statement
+        { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
+        { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
+        { 
+            // Cash Flow from Operations is calculated here because its components are at the top-level
+            label: "Cash Flow from Operations", 
+            calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+        { 
+            label: "Cash Flow from Investing (CapEx)", 
+            calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+        { 
+            label: "Cash Flow from Financing", 
+            calculation: (d) => d['excel_cfs']['Cash Flow from Financing'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+        { 
+            // FIX: Use the data directly from the 'excel_cfs' dictionary, which is guaranteed to be Year 1 to N
+            label: "Net Change in Cash", 
+            calculation: (d) => d['excel_cfs']['Net Change in Cash'], 
+            tableBody: cashFlowBody, 
+            startIdx: 0, 
+            isBold: true, 
+            customClass: 'heavy-total-row' 
+        },
+    ];
+    
+    forecastData.forEach(insertDataRow); 
+    
+    renderCharts(data);
+    resultsContainer.style.display = 'block';
+}
+
+/**
+ * Renders/updates the charts with new forecast data.
+ * @param {object} data The forecast results from the backend.
+ */
+function renderCharts(data) {
+    const years = data["Years"].slice(1).map(y => `Year ${y}`);
+    const ebitPct = data["Revenue"].slice(1).map((rev, i) => rev === 0 ? 0 : (data["EBIT"].slice(1)[i] / rev) * 100);
+
+    const chartConfigs = [{
+        chartVar: 'revenueChart', canvasId: 'revenueKpiChart', config: {
+            type: 'bar',
+            data: { labels: years, datasets: [
+                { label: 'Revenue', data: data["Revenue"].slice(1), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
+                { label: 'Net Income', data: data["Net Income"].slice(1), backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'y' },
+                { type: 'line', label: 'EBIT %', data: ebitPct, borderColor: 'rgb(255, 99, 132)', borderWidth: 3, fill: false, yAxisID: 'y1' }
+            ]},
+            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: {
+                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Amount' } },
+                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentage (%)' } }
+            }, plugins: { title: { display: true, text: 'Profitability Trends' } } }
+        }
+    }, {
+        chartVar: 'cashDebtChart', canvasId: 'cashDebtChart', config: {
+            type: 'bar',
+            data: { labels: years, datasets: [
+                { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
+                { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+            ]},
+            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
+        }
+    }];
+
+    // Using a map to hold chart instances { 'revenueChart': chartInstance }
+    const charts = { revenueChart, cashDebtChart };
+
+    chartConfigs.forEach(cfg => {
+        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
+        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
+    });
+
+    // Re-assign global variables
+    revenueChart = charts.revenueChart;
+    cashDebtChart = charts.cashDebtChart;
+}
 
 
-if __name__ == '__main__':
-    # Use environment variable PORT if available (for deployment platforms)
-    # otherwise, default to 5000 for local testing.
-    import os
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+// --- Initial Setup ---
+// Set the initial visibility of revenue growth inputs when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const years = 3;
+    createAllGranularInputs(years);      
+});
