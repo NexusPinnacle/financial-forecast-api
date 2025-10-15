@@ -108,7 +108,7 @@ button:hover {
 /* Adjust button to span the full width of the main container again */
 #calculateBtn, #exportBtn {
     width: calc(100% - 60px); /* 100% of max-width - padding on container */
-    max-width: 900px;
+    max-width: 1050px;
 }
 
 .error-message {
@@ -272,22 +272,3 @@ thead th {
 }
 
 
-/* --- Button Styling for Main Action Buttons --- */
-
-#calculateBtn {
-    /* Make the button take up 100% of the form's width */
-    width: 100%;
-    /* Ensure it behaves as a block element for full width behavior */
-    display: block; 
-    /* Add some margin to visually separate it from the input sections */
-    margin-top: 25px;
-    margin-bottom: 25px;
-}
-
-#exportBtn {
-    width: 100%;
-    display: block;
-    /* Apply specific export button color and margin */
-    background-color: #1e6f5c; 
-    margin-top: 20px;
-}
