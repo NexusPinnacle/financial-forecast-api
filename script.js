@@ -38,6 +38,13 @@ JavaScript
  * @param {string} unit - The unit for the label (e.g., "(%)", "(Days)").
  */
 function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
+    
+    // 💥 FIX 1: Add a safety check for the container element
+    if (!container) {
+        console.error(`Granular input container element not found for ${idPrefix}. Inputs cannot be generated.`);
+        return; 
+    }
+    
     container.innerHTML = ''; // Clear previous inputs
     
     // Create a horizontal wrapper
@@ -85,6 +92,7 @@ function createVerticalInputs(container, idPrefix, labelBase, years, defaultValu
     container.appendChild(descriptiveHeader);
     container.appendChild(wrapper);
 }
+    
 
 /**
  * Generates all granular inputs using the vertical list layout.
