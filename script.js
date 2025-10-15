@@ -25,8 +25,6 @@ const debtRepaymentContainer = document.getElementById('debt-repayment-container
 let revenueChart = null;
 let cashDebtChart = null;
 
-JavaScript
-
 /**
  * Creates and populates year-specific vertical inputs for a single category.
  * @param {HTMLElement} container - The container element to populate.
