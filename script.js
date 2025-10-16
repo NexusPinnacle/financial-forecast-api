@@ -1,5 +1,5 @@
 // API URLs
-// Using relative paths for better deployment flexibility (as suggested in initial review)
+// Using relative paths for better deployment flexibility
 const API_URL = '/api/forecast'; 
 const EXPORT_API_URL = '/api/export'; 
 
@@ -13,7 +13,7 @@ const errorMessage = document.getElementById('error-message');
 const yearButtons = document.querySelectorAll('.year-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
 
-// Granular assumption containers (using querySelectorAll for easier management if needed)
+// Granular assumption containers
 const revenueGrowthContainer = document.getElementById('revenue-growth-container');
 const cogsPctContainer = document.getElementById('cogs-pct-container');
 const fixedOpexContainer = document.getElementById('fixed-opex-container');
@@ -26,6 +26,13 @@ const debtRepaymentContainer = document.getElementById('debt-repayment-container
 // Chart instances
 let revenueChart = null;
 let cashDebtChart = null;
+
+// NEW Modal Elements
+const modal = document.getElementById('confirmationModal');
+const modalMessage = document.getElementById('modal-message');
+const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalCloseBtn = document.querySelector('.close-btn');
 
 // Helper array to manage all default/granular input pairs
 const assumptionMap = [
@@ -103,8 +110,12 @@ function regenerateAllGranularInputs() {
     ];
 
     granularInputs.forEach(item => {
-        const defaultValue = parseFloat(document.getElementById(item.defaultId).value) || 0;
-        createVerticalInputs(item.containerId, item.label, item.inputName, defaultValue);
+        // Only regenerate if the container is open (i.e. if children > 0)
+        const container = document.getElementById(item.containerId);
+        if (container.children.length > 0) {
+            const defaultValue = parseFloat(document.getElementById(item.defaultId).value) || 0;
+            createVerticalInputs(item.containerId, item.label, item.inputName, defaultValue);
+        }
     });
 }
 
@@ -176,20 +187,15 @@ function populateTable(tableBody, data, years, currencySymbol) {
         const row = tableBody.insertRow();
         row.insertCell().textContent = lineItem;
         
-        // Ensure values is an array for safety (e.g. CFS data can be an array of arrays if improperly formatted)
+        // Ensure values is an array for safety
         const displayValues = Array.isArray(values) ? values : [values]; 
 
         // Populate cells (starting from Year 0)
         displayValues.forEach((value, index) => {
             const cell = row.insertCell();
             
-            // Apply formatting: Currency for most, percentage for rates (if any were passed here)
-            let formattedValue;
-            if (lineItem.includes('%') || lineItem.includes('Rate')) {
-                formattedValue = (value * 100).toFixed(2) + '%';
-            } else {
-                formattedValue = `${currencySymbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            }
+            // Apply formatting: Currency for most
+            let formattedValue = `${currencySymbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             cell.textContent = formattedValue;
             
             // Apply bold styling for key lines (Total/Net)
@@ -200,10 +206,48 @@ function populateTable(tableBody, data, years, currencySymbol) {
     }
 }
 
+/**
+ * Shows the confirmation modal and sets up the pending action callbacks.
+ * @param {string} message - The message to display in the modal.
+ * @param {function} onConfirm - Function to execute if the user confirms.
+ * @param {function} onCancel - Function to execute if the user cancels.
+ */
+function showConfirmation(message, onConfirm, onCancel) {
+    modalMessage.innerHTML = message; // Use innerHTML to allow for bolding/formatting
+    
+    // Remove previous listeners
+    modalConfirmBtn.onclick = null;
+    modalCancelBtn.onclick = null;
+    modalCloseBtn.onclick = null;
+
+    // Set new listeners
+    modalConfirmBtn.onclick = () => {
+        modal.style.display = 'none';
+        onConfirm();
+    };
+    
+    const closeModal = () => {
+        modal.style.display = 'none';
+        onCancel();
+    };
+
+    modalCancelBtn.onclick = closeModal;
+    modalCloseBtn.onclick = closeModal;
+    
+    modal.style.display = 'block';
+
+    // Close modal if user clicks outside of it
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+}
+
 
 // --- Event Listeners ---
 
-// 1. Year Buttons (NEW LOGIC WITH CONFIRM)
+// 1. Year Buttons (NEW LOGIC WITH MODAL)
 yearButtons.forEach(button => {
     button.addEventListener('click', function() {
         const newYears = parseInt(this.getAttribute('data-years'));
@@ -211,21 +255,23 @@ yearButtons.forEach(button => {
         
         if (newYears === currentYears) return; // No change
 
-        const granularInputsExist = revenueGrowthContainer.children.length > 0; // Check any container
+        const granularInputsExist = revenueGrowthContainer.children.length > 0; // Check if any granular inputs have been opened/created
         
         if (granularInputsExist) {
-            const message = `⚠️ Warning! Changing the forecast duration from ${currentYears} to ${newYears} years will clear **all year-specific granular inputs**. \n\nAre you sure you want to proceed?`;
+            const message = `Changing the forecast duration from ${currentYears} to ${newYears} years will **clear all year-specific granular inputs**. Are you sure you want to proceed?`;
             
-            if (confirm(message)) {
-                // User confirmed: run the original logic
-                yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
-                this.classList.add('selected-year-btn');
-                
-                // Update hidden input and regenerate inputs
-                forecastYearsInput.value = newYears;
-                regenerateAllGranularInputs();
-            } 
-            // If user cancels, the function simply exits, and no change occurs.
+            showConfirmation(message, 
+                // onConfirm (The original logic)
+                () => {
+                    yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
+                    this.classList.add('selected-year-btn');
+                    
+                    forecastYearsInput.value = newYears;
+                    regenerateAllGranularInputs();
+                },
+                // onCancel (Do nothing)
+                () => {}
+            );
         } else {
             // No granular inputs created yet, safe to change
             yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
@@ -261,7 +307,7 @@ document.querySelectorAll('.collapsible-header').forEach(header => {
 });
 
 
-// 3. Default Input Change (NEW LOGIC WITH CONFIRM)
+// 3. Default Input Change (NEW LOGIC WITH MODAL)
 assumptionMap.forEach(assumption => {
     const defaultInput = document.getElementById(assumption.defaultId);
     
@@ -272,31 +318,32 @@ assumptionMap.forEach(assumption => {
         defaultInput.addEventListener('change', function() {
             const granularContainer = document.getElementById(assumption.containerId);
             
-            // Check if granular inputs are visible/populated
             const granularInputsExist = granularContainer.children.length > 0;
             const newValue = parseFloat(this.value) || 0;
+            const oldValue = this.dataset.oldValue; 
             
             // If the value hasn't actually changed, do nothing
-            if (newValue === parseFloat(this.dataset.oldValue)) return;
+            if (newValue.toFixed(2) === parseFloat(oldValue).toFixed(2)) return;
 
             if (granularInputsExist) {
-                const message = `⚠️ Warning! Changing the **Default ${assumption.label}** will overwrite any custom year-specific values you have entered for this assumption. \n\nAre you sure you want to proceed?`;
+                const message = `Changing the **Default ${assumption.label}** will overwrite any custom year-specific values you have entered for this assumption. Are you sure you want to proceed?`;
                 
-                const oldValue = this.dataset.oldValue; 
-
-                if (confirm(message)) {
-                    // User confirmed: regenerate the inputs and update old value
-                    createVerticalInputs(
-                        assumption.containerId, 
-                        `${assumption.label} (%)`, 
-                        assumption.inputKey, 
-                        newValue
-                    );
-                    this.dataset.oldValue = this.value; // Store the new value
-                } else {
-                    // User canceled: revert the input field to the stored old value
-                    this.value = oldValue;
-                }
+                showConfirmation(message,
+                    // onConfirm (The original regeneration logic)
+                    () => {
+                        createVerticalInputs(
+                            assumption.containerId, 
+                            `${assumption.label} (%)`, 
+                            assumption.inputKey, 
+                            newValue
+                        );
+                        this.dataset.oldValue = this.value; // Store the new value
+                    },
+                    // onCancel (Revert the input value to its previous state)
+                    () => {
+                        this.value = oldValue;
+                    }
+                );
             } else {
                  // No granular inputs visible: just store the new value
                 this.dataset.oldValue = this.value; 
@@ -469,5 +516,10 @@ function renderCharts(data, years) {
 // Set initial year value to match the selected button on load
 forecastYearsInput.value = document.querySelector('.selected-year-btn').getAttribute('data-years');
 
-// Initial call to set up granular input placeholders (but not populate them)
-// We rely on the collapsible logic to populate them on the first click.
+// Initial setup of old values for default inputs
+assumptionMap.forEach(assumption => {
+    const defaultInput = document.getElementById(assumption.defaultId);
+    if (defaultInput) {
+        defaultInput.dataset.oldValue = defaultInput.value;
+    }
+});
