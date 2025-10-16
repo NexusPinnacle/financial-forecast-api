@@ -30,133 +30,158 @@
                     <div class="input-group">
                         <label for="currency_symbol">Select Currency:</label>
                         <select id="currency_symbol" style="flex-basis: 35%;">
-                            <option value="$">$ USD</option>
-                            <option value="€">€ EUR</option>
-                            <option value="£">£ GBP</option>
+                            <option value="$" selected>USD ($)</option>
+                            <option value="€">EUR (€)</option>
+                            <option value="£">GBP (£)</option>
+                            <option value="¥">JPY (¥)</option>
                         </select>
                     </div>
+                    
+                    <div class="input-group">
+                        <label for="initial_revenue">Initial Revenue (Year 0):</label>
+                        <input type="number" id="initial_revenue" value="1000" step="0.01" required>
+                    </div>
 
                     <div class="input-group">
-                        <label for="initial_revenue">Year 0 Revenue ($):</label>
-                        <input type="number" id="initial_revenue" name="initial_revenue" value="1000000" step="10000">
+                        <label for="default_revenue_growth">Revenue Growth (Default %):</label>
+                        <input type="number" id="default_revenue_growth" value="5" step="0.1" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="default_cogs_pct">COGS as % of Revenue (Default):</label>
+                        <input type="number" id="default_cogs_pct" value="40" step="0.1" required>
                     </div>
                     
                     <div class="input-group">
-                        <label for="initial_cash">Year 0 Cash ($):</label>
-                        <input type="number" id="initial_cash" name="initial_cash" value="100000" step="1000">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="initial_ppe">Year 0 Net PP&E ($):</label>
-                        <input type="number" id="initial_ppe" name="initial_ppe" value="250000" step="1000">
+                        <label for="initial_ppe">Initial PP&E (Year 0):</label>
+                        <input type="number" id="initial_ppe" value="500" step="0.01" required>
                     </div>
                     
                     <div class="input-group">
-                        <label for="initial_debt">Year 0 Debt ($):</label>
-                        <input type="number" id="initial_debt" name="initial_debt" value="50000" step="1000">
+                        <label for="default_fixed_opex">Fixed Operating Expenses (Default):</label>
+                        <input type="number" id="default_fixed_opex" value="100" step="0.01" required>
+                    </div>
+                     
+                    <div class="input-group">
+                        <label for="default_capex">Annual Capital Expenditure (Default):</label>
+                        <input type="number" id="default_capex" value="50" step="0.01" required>
                     </div>
 
-                    <hr>
-
-                    <h3>Rate Assumptions (Constant)</h3>
-                    
+                    <div class="input-group">
+                        <label for="depreciation_rate">Depreciation Rate (%):</label>
+                        <input type="number" id="depreciation_rate" value="10" step="0.1" required>
+                    </div>
                     <div class="input-group">
                         <label for="tax_rate">Tax Rate (%):</label>
-                        <input type="number" id="tax_rate" name="tax_rate" value="25" min="0" max="100" step="1">
+                        <input type="number" id="tax_rate" value="25" step="0.1" required>
                     </div>
 
+                    <h3>Working Capital Assumptions (Defaults)</h3>
                     <div class="input-group">
-                        <label for="depreciation_rate">Depreciation Rate (% of BGN PP&E):</label>
-                        <input type="number" id="depreciation_rate" name="depreciation_rate" value="10" min="0" step="1">
+                        <label for="default_dso_days">Days Sales Outstanding (AR) (Default Days):
+                            <span class="tooltip-trigger" title="Average number of days it takes for customers to pay their invoices.">❓</span>
+                        </label>
+                        <input type="number" id="default_dso_days" value="45" step="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="default_dio_days">Days Inventory Outstanding (Inventory) (Default Days):
+                            <span class="tooltip-trigger" title="Average number of days inventory is held before it's sold.">❓</span>
+                        </label>
+                        <input type="number" id="default_dio_days" value="30" step="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="default_dpo_days">Days Payable Outstanding (AP) (Default Days):
+                            <span class="tooltip-trigger" title="Average number of days it takes the company to pay its suppliers.">❓</span>
+                        </label>
+                        <input type="number" id="default_dpo_days" value="60" step="1" required>
                     </div>
                     
+                    <h3>Financing & Cash Assumptions</h3>
                     <div class="input-group">
-                        <label for="interest_rate">Interest Rate (% of BGN Debt):</label>
-                        <input type="number" id="interest_rate" name="interest_rate" value="5" min="0" step="0.1">
+                        <label for="initial_cash">Initial Cash (Year 0):</label>
+                        <input type="number" id="initial_cash" value="100" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="initial_debt">Initial Debt (Year 0):</label>
+                        <input type="number" id="initial_debt" value="200" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="default_annual_debt_repayment">Annual Debt Repayment (Default):</label>
+                        <input type="number" id="default_annual_debt_repayment" value="50" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="interest_rate">Interest Rate (%):</label>
+                        <input type="number" id="interest_rate" value="5" step="0.1" required>
                     </div>
                 </div> 
-
+                
                 <div class="right-pane">
-                    <h3>Granular Assumptions (Year-Specific)</h3>
-                    <p class="guide-text">Click to set year-specific values. Default values will be used if left blank or closed.</p>
+                    <h2>Granular Assumptions</h2>
+                    <p>Inputs here override the default values for the specified year.</p>
                     
-                    <div class="input-group">
-                        <label for="default_revenue_growth">Default Revenue Growth (%):</label>
-                        <input type="number" id="default_revenue_growth" value="5" min="-50" step="0.1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific Revenue Growth</div>
-                        <div id="revenue-growth-container" class="collapsible-content"></div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="default_cogs_pct">Default COGS % of Revenue:</label>
-                        <input type="number" id="default_cogs_pct" value="60" min="0" max="100" step="0.1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific COGS %</div>
-                        <div id="cogs-pct-container" class="collapsible-content"></div>
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="revenue-growth-container">
+                            Revenue Growth (%)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div id="revenue-growth-container" class="collapsible-content">
+                            </div>
                     </div>
 
-                    <div class="input-group">
-                        <label for="default_fixed_opex">Default Fixed Opex ($):</label>
-                        <input type="number" id="default_fixed_opex" value="100000" min="0" step="1000">
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="cogs-pct-container">
+                            Direct Costs (COGS % per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
+                        <div id="cogs-pct-container" class="collapsible-content">
+                        </div>
                     </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific Fixed Opex</div>
+
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="fixed-opex-container">
+                            Fixed Operating Expenses (Amount per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="fixed-opex-container" class="collapsible-content"></div>
                     </div>
-
-                    <div class="input-group">
-                        <label for="default_capex_rate">Default CapEx Rate (% of P.Y. Revenue):</label>
-                        <input type="number" id="default_capex_rate" value="5" min="0" step="0.1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific CapEx Rate</div>
+                    
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="capex-container">
+                            Capital Expenditure (Amount per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="capex-container" class="collapsible-content"></div>
                     </div>
 
-                    <hr>
-                    
-                    <h3>Working Capital Assumptions (Year-Specific)</h3>
-                    
-                    <div class="input-group">
-                        <label for="default_dso_days">Default DSO Days (AR):</label>
-                        <input type="number" id="default_dso_days" value="30" min="0" step="1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific DSO Days</div>
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="dso-days-container">
+                            Days Sales Outstanding (AR Days per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="dso-days-container" class="collapsible-content"></div>
                     </div>
-
-                    <div class="input-group">
-                        <label for="default_dio_days">Default DIO Days (Inventory):</label>
-                        <input type="number" id="default_dio_days" value="45" min="0" step="1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific DIO Days</div>
+                    
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="dio-days-container">
+                            Days Inventory Outstanding (Inventory Days per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="dio-days-container" class="collapsible-content"></div>
                     </div>
-
-                    <div class="input-group">
-                        <label for="default_dpo_days">Default DPO Days (AP):</label>
-                        <input type="number" id="default_dpo_days" value="60" min="0" step="1">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific DPO Days</div>
+                    
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="dpo-days-container">
+                            Days Payable Outstanding (AP Days per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="dpo-days-container" class="collapsible-content"></div>
                     </div>
-
-                    <hr>
-
-                    <h3>Financing Assumptions (Year-Specific)</h3>
                     
-                    <div class="input-group">
-                        <label for="default_debt_repayment">Default Annual Debt Repayment ($):</label>
-                        <input type="number" id="default_debt_repayment" value="10000" min="0" step="1000">
-                    </div>
-                    <div class="collapsible-section">
-                        <div class="collapsible-header">Set Year-Specific Debt Repayment</div>
+                    <div class="granular-section">
+                        <h4 class="collapsible-header collapsed" data-target="debt-repayment-container">
+                            Annual Debt Repayment (Amount per Year)
+                            <span class="toggle-icon">▼</span>
+                        </h4>
                         <div id="debt-repayment-container" class="collapsible-content"></div>
                     </div>
 
@@ -182,17 +207,7 @@
             </div>
         </div>
     </div>
-    
-<div id="confirmationModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn">&times;</span>
-        <p id="modal-message"></p>
-        <div class="modal-actions">
-            <button id="modal-confirm-btn" class="modal-btn confirm">Continue</button>
-            <button id="modal-cancel-btn" class="modal-btn cancel">Cancel</button>
-        </div>
-    </div>
-</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="script.js"></script>
 </body>
