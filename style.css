@@ -49,178 +49,144 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 1em;
     transition: background-color 0.3s;
-    width: 100%; /* Default to full width for main buttons */
 }
 
 button:hover {
-    background-color: #00568c;
+    background-color: #002a43; /* Darker on hover */
 }
 
-/* Year selection buttons (smaller, inline) */
+/* Year Selection Buttons */
 .year-select-btn {
-    width: auto;
-    padding: 8px 15px;
     background-color: #f0f0f0;
     color: #333;
+    padding: 8px 15px;
     border: 1px solid #ccc;
-    font-size: 14px;
 }
 
-.year-select-btn:hover {
-    background-color: #e0e0e0;
-}
-
-.selected-year-btn {
-    /* Style for the currently selected button */
-    background-color: #3b84f5; /* Match your H1 color */
+.selected-year-btn, .year-select-btn:hover {
+    background-color: #3b84f5; /* Highlight selected/hovered */
     color: white;
-    font-weight: bold;
     border-color: #3b84f5;
 }
 
-/* --- Two-Pane Layout for Inputs --- */
+/* Layout for two input panes */
 .input-layout {
-    display: flex; /* Use flexbox for the two panes */
-    gap: 40px;
-    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 40px; /* Space between the two columns */
+    margin-bottom: 30px;
 }
 
-.left-pane {
+.left-pane, .right-pane {
     flex-basis: 50%;
-    min-width: 45%;
-    /* Highlight the division */
-    padding-right: 20px; 
-    border-right: 1px solid #eee;
 }
 
-.right-pane {
-    flex-basis: 50%;
-    min-width: 45%;
-}
-
-/* Granular Section Spacing */
-.granular-section {
-    margin-bottom: 10px; /* Reduced margin to improve compactness */
-}
-
-/* Adjust button to span the full width of the main container again */
-#calculateBtn, #exportBtn {
-    width: calc(100%); /* 100% of max-width - padding on container */
-    max-width: 1050px;
+.left-pane hr, .right-pane hr {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 20px 0;
 }
 
 .error-message {
-    color: #dc3545;
+    color: #dc3545; /* Red for errors */
     font-weight: bold;
     margin-top: 15px;
 }
 
-/* Results Tables */
+/* Table Styling */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 0.9em;
+    margin: 20px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-th, td {
+table th, table td {
     border: 1px solid #ddd;
-    padding: 8px;
+    padding: 10px;
     text-align: right;
 }
 
-th:first-child, td:first-child {
-    text-align: left;
-    background-color: #f7f7f7;
-    font-weight: bold;
-}
-
-thead th {
-    background-color: #f0f0f0;
-    color: #333;
-}
-
-.heavy-total-row {
-    border-top: 2px solid #000;
-}
-
-.data-cell {
-    font-family: 'Courier New', monospace; /* Use monospaced font for numbers */
-}
-
-/* Tooltip Styling */
-.tooltip-trigger {
-    cursor: help;
+table th {
+    background-color: #f8f8f8;
     color: #3b84f5;
-    margin-left: 5px;
+    font-weight: bold;
+    position: sticky; /* Keep header visible on scroll */
+    top: 0;
 }
 
-/* --- NEW COLLAPSE/EXPAND STYLES --- */
+table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td:first-child {
+    text-align: left;
+    font-weight: 500;
+}
+
+.total-row {
+    font-weight: bold;
+    background-color: #e6f0ff !important; /* Light blue background for totals */
+}
+
+/* Collapsible Sections */
+.guide-text {
+    font-style: italic;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+}
+
 .collapsible-header {
+    background-color: #e9ecef;
+    color: #333;
     cursor: pointer;
-    background-color: #f7f7f7;
     padding: 10px;
-    border: 1px solid #ddd;
-    margin: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-    font-size: 1.1em;
-    font-weight: normal; /* Override h4 default bold */
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 1em;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+    border-radius: 4px;
+    font-weight: bold;
 }
 
 .collapsible-header:hover {
-    background-color: #eee;
+    background-color: #d8dee3;
 }
 
-.toggle-icon {
-    transition: transform 0.3s ease;
-    font-weight: bold;
-}
-
-/* Rotate icon when the header is not collapsed */
-.collapsible-header:not(.collapsed) .toggle-icon {
-    transform: rotate(180deg);
+.collapsible-header.active {
+    background-color: #003b5c;
+    color: white;
 }
 
 .collapsible-content {
+    padding: 0 10px;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease-in-out;
-    padding: 0 10px;
-    border: 1px solid #ddd;
-    border-top: none;
+    transition: max-height 0.3s ease-out;
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #eee; /* Separate different assumption types */
 }
 
-.collapsible-content.expanded-content {
-    /* Set max-height large enough to hold all content (e.g., 10 * 15px height + padding) */
-    max-height: 500px; 
-    padding-bottom: 15px; 
-}
-
-/* Re-ensure standard vertical input group styling within the collapsible content */
-.collapsible-content .input-group {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    margin-top: 10px;
-    align-items: center;
-}
-
-
-/* --- New Granular Horizontal Layout Styles --- */
-
-/* Container for all inputs in a granular category (e.g., all Revenue Growth years) */
+/* Granular Horizontal Input Row */
 .granular-input-row {
     display: flex;
-    flex-wrap: nowrap; /* Keep all years on one line */
-    overflow-x: auto; /* Allow horizontal scrolling if many years are selected (e.g., 10) */
-    gap: 10px; /* Spacing between year inputs */
+    flex-direction: row;
+    overflow-x: auto; /* Allows horizontal scrolling for many years */
     padding: 10px 0;
-    border-bottom: 1px solid #eee; /* Separate different assumption types */
+    gap: 10px;
+    border-bottom: 1px solid #eee;
+    background-color: #fff; /* White background for the scrolling row */
+    margin-bottom: 10px;
 }
 
 /* Individual year input block */
@@ -261,14 +227,78 @@ thead th {
 
 /* Remove the redundant vertical input-group styling within the granular section */
 .collapsible-content .input-group {
-    /* This overrides the old vertical input-group style in the granular section */
-    display: none; 
+    /* This overrides the old vertical input-group style in */
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-bottom: 0;
 }
 
-/* Re-add specific padding for the content container for visual appeal */
-.collapsible-content.expanded-content {
-    max-height: 500px; 
-    padding: 5px 10px 15px 10px; /* Adjusted padding */
+/* --- Modal Pop-up Styles --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
 }
 
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+    max-width: 450px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
 
+.modal-content p {
+    font-size: 1.1em;
+    margin-bottom: 20px;
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 15px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 45%;
+}
+
+.modal-btn.confirm {
+    background-color: #f59e0b; /* A warning/amber color */
+    color: white;
+}
+
+.modal-btn.cancel {
+    background-color: #ccc;
+    color: #333;
+}
