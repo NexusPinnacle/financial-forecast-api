@@ -45,6 +45,10 @@ def generate_forecast(
     debt_closing = [0.0] * (years + 1)
     retained_earnings = [0.0] * (years + 1)
     cash_closing = [0.0] * (years + 1)
+    # NEW: Balance Sheet Totals
+    total_assets = [0.0] * (years + 1)
+    total_liabilities_equity = [0.0] * (years + 1)
+
     
     # Cash Flow Components
     nwc_closing = [0.0] * (years + 1)
@@ -75,7 +79,12 @@ def generate_forecast(
     # To balance: RE = Assets - Liabilities
     retained_earnings[0] = (cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]) - \
                            (ap_closing[0] + debt_closing[0])
-                           
+
+     # NEW: Calculate Year 0 Totals
+    total_assets[0] = cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]
+    total_liabilities_equity[0] = ap_closing[0] + debt_closing[0] + retained_earnings[0]
+
+    
     # 3. Main Forecast Loop
     for i in range(1, years + 1):
         # --- Rates for Current Year i (using 0-based list indexing) ---
@@ -162,6 +171,13 @@ def generate_forecast(
         # Cash (Closing)
         cash_closing[i] = cash_closing[i-1] + net_change_in_cash[i]
 
+        # NEW: Calculate Period Totals
+        # Total Assets
+        total_assets[i] = cash_closing[i] + ar_closing[i] + inventory_closing[i] + ppe_closing[i]
+        
+        # Total Liabilities & Equity
+        total_liabilities_equity[i] = ap_closing[i] + debt_closing[i] + retained_earnings[i]
+
     # 8. Prepare Results (Using the calculated lists)
     
     change_in_nwc_cfs = [-x for x in change_in_nwc[1:]] 
@@ -190,10 +206,13 @@ def generate_forecast(
             "Fixed Operating Expenses": fixed_opex_list[1:], "Depreciation": depreciation[1:], "EBIT": ebit[1:], 
             "Interest Expense": interest_expense[1:], "EBT": ebt[1:], "Taxes": taxes[1:], "Net Income": net_income[1:],
         },
-        "excel_bs": {
+       "excel_bs": {
             "Cash": cash_closing, "Accounts Receivable": ar_closing, "Inventory": inventory_closing, 
-            "Net PP&E": ppe_closing, "Accounts Payable": ap_closing, "Debt": debt_closing,
+            "Net PP&E": ppe_closing, 
+            "Total Assets": total_assets, # NEW LINE
+            "Accounts Payable": ap_closing, "Debt": debt_closing,
             "Retained Earnings": retained_earnings,
+            "Total Liabilities & Equity": total_liabilities_equity, # NEW LINE
         },
         "excel_cfs": cfs_data,
         # --- FIX APPLIED HERE ---
