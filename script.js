@@ -5,200 +5,194 @@ const EXPORT_API_URL = '/api/export';
 // DOM Elements
 const form = document.getElementById('forecastForm');
 const resultsContainer = document.getElementById('results-container');
-const incomeStatementBody = document.querySelector('#incomeStatementTable tbody');
-const balanceSheetBody = document.querySelector('#balanceSheetTable tbody');
-const cashFlowBody = document.querySelector('#cashFlowTable tbody');
 const errorMessage = document.getElementById('error-message');
-const yearButtons = document.querySelectorAll('.year-select-btn');
+
+// Mode & Duration Inputs
+const modeButtons = document.querySelectorAll('.mode-btn');
+const annualButtonsContainer = document.getElementById('annual-buttons');
+const monthlyButtonsContainer = document.getElementById('monthly-buttons');
+const annualButtons = document.querySelectorAll('.year-select-btn');
+const monthlyButtons = document.querySelectorAll('.month-select-btn');
 const forecastYearsInput = document.getElementById('forecast_years');
-// Granular assumption containers
-const revenueGrowthContainer = document.getElementById('revenue-growth-container');
-const cogsPctContainer = document.getElementById('cogs-pct-container');
-const fixedOpexContainer = document.getElementById('fixed-opex-container');
-const capexContainer = document.getElementById('capex-container');
-const dsoDaysContainer = document.getElementById('dso-days-container');
-const dioDaysContainer = document.getElementById('dio-days-container');
-const dpoDaysContainer = document.getElementById('dpo-days-container');
-const debtRepaymentContainer = document.getElementById('debt-repayment-container');
+const periodModeInput = document.getElementById('period_mode');
+const durationLabel = document.getElementById('duration-label');
+
+// Containers
+const granularContainers = {
+    revenue_growth: document.getElementById('revenue-growth-container'),
+    cogs_pct: document.getElementById('cogs-pct-container'),
+    fixed_opex: document.getElementById('fixed-opex-container'),
+    capex: document.getElementById('capex-container'),
+    dso_days: document.getElementById('dso-days-container'),
+    dio_days: document.getElementById('dio-days-container'),
+    dpo_days: document.getElementById('dpo-days-container'),
+    debt_repayment: document.getElementById('debt-repayment-container')
+};
 
 // Chart instances
 let revenueChart = null;
 let cashDebtChart = null;
 
-/**
- * Creates and populates year-specific vertical inputs for a single category.
- * @param {HTMLElement} container - The container element to populate.
- * @param {string} idPrefix - The prefix for the input IDs (e.g., "revenue_growth").
- * @param {string} labelBase - The base text for the input label (e.g., "Revenue Growth").
- * @param {number} years - The number of years to generate inputs for.
- * @param {string} defaultValueId - The ID of the default input element.
- * @param {string} step - The step attribute for the input (e.g., "0.1").
- * @param {string} unit - The unit for the label (e.g., "(%)", "(Days)").
- */
-function createVerticalInputs(container, idPrefix, labelBase, years, defaultValueId, step, unit) {
-    
-    // 💥 FIX 1: Add a safety check for the container element
-    if (!container) {
-        console.error(`Granular input container element not found for ${idPrefix}. Inputs cannot be generated.`);
-        return; 
+// --- Tab Switching Logic ---
+function openTab(evt, tabName) {
+    // Hide all tab content
+    const tabContents = document.getElementsByClassName("tab-content");
+    for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].style.display = "none";
     }
+
+    // Remove active class from buttons
+    const tabLinks = document.getElementsByClassName("tab-link");
+    for (let i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    }
+
+    // Show current tab and add active class
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+// Expose to window for HTML onClick
+window.openTab = openTab;
+
+
+// --- UI Helpers for Inputs ---
+
+function createVerticalInputs(container, idPrefix, labelBase, count, defaultValueId, step, unit) {
+    if (!container) return;
+    container.innerHTML = ''; 
     
-    container.innerHTML = ''; // Clear previous inputs
-    
-    // Create a horizontal wrapper
     const wrapper = document.createElement('div');
     wrapper.className = 'granular-input-row';
     
-    // --- FIX: Add robust checking for default value element ---
     const defaultElement = document.getElementById(defaultValueId);
-    let defaultVal = 0; 
+    let defaultVal = defaultElement ? parseFloat(defaultElement.value) : 0; 
     
-    if (defaultElement) {
-        defaultVal = parseFloat(defaultElement.value);
-    } else {
-        // If the element is missing, log a warning but continue with 0 to prevent script crash
-        console.warn(`Default input element not found for ID: ${defaultValueId}. Using 0.`);
-    }
-    // -----------------------------------------------------------
-
-    for (let i = 1; i <= years; i++) {
-        // Use a new class `granular-year-input` for styling the inline block
+    for (let i = 1; i <= count; i++) {
         const inputDiv = document.createElement('div');
         inputDiv.className = 'granular-year-input';
         
-        const initialValue = defaultVal;
-        let labelText = `Y${i}${unit.replace(/[\(\)]/g, '')}:`; // Simplified label for horizontal layout
-        
-        // Special case for the last year's label
-        if (idPrefix === 'revenue_growth' && i === years && years < 10) {
-            labelText = `Y${i}+${unit.replace(/[\(\)]/g, '')}:`; // Even simpler: Y3+
-        }
+        let labelText = `Y${i}${unit.replace(/[\(\)]/g, '')}:`;
+        if (idPrefix === 'revenue_growth' && i === count && count < 10) labelText = `Y${i}+`;
 
-        // Use flex layout inside inputDiv
         inputDiv.innerHTML = `
             <label for="${idPrefix}_y${i}">${labelText}</label>
-            <input type="number" id="${idPrefix}_y${i}" value="${initialValue}" step="${step}" required>
+            <input type="number" id="${idPrefix}_y${i}" value="${defaultVal}" step="${step}" required>
         `;
         wrapper.appendChild(inputDiv);
     }
     
-    // Insert the descriptive header label before the inputs
-    const descriptiveHeader = document.createElement('p');
-    descriptiveHeader.className = 'granular-row-label';
-    descriptiveHeader.textContent = labelBase;
-    
-    container.appendChild(descriptiveHeader);
+    const header = document.createElement('p');
+    header.className = 'granular-row-label';
+    header.textContent = labelBase;
+    container.appendChild(header);
     container.appendChild(wrapper);
 }
+
+function createAllGranularInputs(numYears) {
+    // Even in monthly mode, we generate ANNUAL inputs for the user to fill (1, 2, 3...)
+    // The backend expands these.
+    // Calculate how many years we need based on total periods
+    const mode = periodModeInput.value;
+    let inputYears = numYears;
     
-
-/**
- * Generates all granular inputs using the vertical list layout.
- * @param {number} years - The number of years to generate inputs for.
- */
-function createAllGranularInputs(years) {
-    // All these calls rely on the existence of the default IDs in index.html, 
-    // which are now safely checked inside createVerticalInputs
-    createVerticalInputs(revenueGrowthContainer, 'revenue_growth', 'Revenue Growth', years, 'default_revenue_growth', '0.1', '(%)');
-    createVerticalInputs(cogsPctContainer, 'cogs_pct', 'COGS as % of Revenue', years, 'default_cogs_pct', '0.1', '(%)');
-    createVerticalInputs(fixedOpexContainer, 'fixed_opex', 'Fixed Opex', years, 'default_fixed_opex', '0.01', '');
-    createVerticalInputs(capexContainer, 'capex', 'CapEx', years, 'default_capex', '0.01', '');
-    createVerticalInputs(dsoDaysContainer, 'dso_days', 'DSO', years, 'default_dso_days', '1', '(Days)');
-    createVerticalInputs(dioDaysContainer, 'dio_days', 'DIO', years, 'default_dio_days', '1', '(Days)');
-    createVerticalInputs(dpoDaysContainer, 'dpo_days', 'DPO', years, 'default_dpo_days', '1', '(Days)');
-    createVerticalInputs(debtRepaymentContainer, 'debt_repayment', 'Debt Repayment', years, 'default_annual_debt_repayment', '0.01', '');
-}
-
-/**
- * Toggles the collapse/expand state of a granular section.
- * @param {Event} e - The click event.
- */
-function toggleCollapse(e) {
-    let header = e.target.closest('.collapsible-header');
-    if (!header) return;
-
-    const targetId = header.getAttribute('data-target');
-    const content = document.getElementById(targetId);
-
-    if (content) {
-        // Toggle the 'collapsed' class on the header
-        header.classList.toggle('collapsed');
-        
-        // Toggle the 'expanded-content' class on the content
-        content.classList.toggle('expanded-content');
+    if (mode === 'monthly') {
+        // e.g. 12 months -> 1 year input, 24 -> 2, 36 -> 3.
+        inputYears = Math.ceil(numYears / 12);
     }
+    
+    createVerticalInputs(granularContainers.revenue_growth, 'revenue_growth', 'Revenue Growth', inputYears, 'default_revenue_growth', '0.1', '(%)');
+    createVerticalInputs(granularContainers.cogs_pct, 'cogs_pct', 'COGS %', inputYears, 'default_cogs_pct', '0.1', '(%)');
+    createVerticalInputs(granularContainers.fixed_opex, 'fixed_opex', 'Fixed Opex', inputYears, 'default_fixed_opex', '0.01', '');
+    createVerticalInputs(granularContainers.capex, 'capex', 'CapEx', inputYears, 'default_capex', '0.01', '');
+    createVerticalInputs(granularContainers.dso_days, 'dso_days', 'DSO', inputYears, 'default_dso_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.dio_days, 'dio_days', 'DIO', inputYears, 'default_dio_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.dpo_days, 'dpo_days', 'DPO', inputYears, 'default_dpo_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.debt_repayment, 'debt_repayment', 'Debt Repay', inputYears, 'default_annual_debt_repayment', '0.01', '');
 }
 
+// --- Event Listeners: Mode & Duration ---
 
-// --- Event Listeners ---
-
-// Add listener to the right pane to handle all collapse clicks
-document.querySelector('.right-pane').addEventListener('click', toggleCollapse);
-
-
-// Handle clicks on 3, 5, 10 year duration buttons
-yearButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        yearButtons.forEach(btn => btn.classList.remove('selected-year-btn'));
-        button.classList.add('selected-year-btn');
+// 1. Toggle Mode (Annual vs Monthly)
+modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         
-        const newYears = button.getAttribute('data-years');
-        forecastYearsInput.value = newYears;
-        const yearsInt = parseInt(newYears, 10);
-        
-        // Regenerate all inputs for the new horizon size
-        createAllGranularInputs(yearsInt); 
+        const mode = btn.getAttribute('data-mode');
+        periodModeInput.value = mode;
+
+        if (mode === 'monthly') {
+            annualButtonsContainer.style.display = 'none';
+            monthlyButtonsContainer.style.display = 'flex';
+            durationLabel.textContent = "Select Duration (Months):";
+            // Default to 12 months if switching
+            updateDuration(12, monthlyButtons);
+        } else {
+            annualButtonsContainer.style.display = 'flex';
+            monthlyButtonsContainer.style.display = 'none';
+            durationLabel.textContent = "Select Duration (Years):";
+            // Default to 3 years
+            updateDuration(3, annualButtons);
+        }
     });
 });
 
-// Event listeners to re-generate granular inputs if the default values change
-document.getElementById('default_revenue_growth').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_cogs_pct').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_fixed_opex').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_capex').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_dso_days').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_dio_days').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_dpo_days').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
-});
-document.getElementById('default_annual_debt_repayment').addEventListener('change', () => {
-    createAllGranularInputs(parseInt(forecastYearsInput.value, 10));
+// 2. Duration Button Click Handlers
+function updateDuration(value, btnNodeList) {
+    btnNodeList.forEach(b => {
+        b.classList.remove('selected-year-btn', 'active'); // clean both classes
+        if (parseInt(b.getAttribute('data-value')) === value) {
+            b.classList.add('selected-year-btn', 'active');
+        }
+    });
+    
+    forecastYearsInput.value = value;
+    createAllGranularInputs(value);
+}
+
+annualButtons.forEach(btn => {
+    btn.addEventListener('click', () => updateDuration(parseInt(btn.getAttribute('data-value')), annualButtons));
 });
 
-// Main form submission for calculation
+monthlyButtons.forEach(btn => {
+    btn.addEventListener('click', () => updateDuration(parseInt(btn.getAttribute('data-value')), monthlyButtons));
+});
+
+// 3. Default Input Changes -> Regenerate Granular
+const defaults = ['default_revenue_growth', 'default_cogs_pct', 'default_fixed_opex', 'default_capex', 'default_dso_days', 'default_dio_days', 'default_dpo_days', 'default_annual_debt_repayment'];
+defaults.forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+        createAllGranularInputs(parseInt(forecastYearsInput.value));
+    });
+});
+
+// 4. Collapse Toggle
+document.querySelector('.right-pane').addEventListener('click', (e) => {
+    let header = e.target.closest('.collapsible-header');
+    if (header) {
+        const targetId = header.getAttribute('data-target');
+        header.classList.toggle('collapsed');
+        document.getElementById(targetId).classList.toggle('expanded-content');
+    }
+});
+
+
+// --- Submission & Calculation ---
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     await handleForecastRequest(API_URL);
 });
 
-// Export button click
 document.getElementById('exportBtn').addEventListener('click', async () => {
     await handleForecastRequest(EXPORT_API_URL, true);
 });
 
-/**
- * Universal handler for both calculation and export requests.
- * @param {string} url - The API endpoint to call.
- * @param {boolean} isExport - Flag to determine if the request is for an Excel export.
- */
 async function handleForecastRequest(url, isExport = false) {
-    errorMessage.textContent = isExport ? 'Generating Excel file...' : '';
+    errorMessage.textContent = isExport ? 'Generating Excel...' : '';
     
     try {
         const data = collectInputData();
-        
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -206,281 +200,201 @@ async function handleForecastRequest(url, isExport = false) {
         });
 
         if (!response.ok) {
-            const errorResult = await response.json();
-            throw new Error(errorResult.error || `API Error: ${response.statusText}`);
+            const err = await response.json();
+            throw new Error(err.error || response.statusText);
         }
 
         if (isExport) {
             await handleFileDownload(response);
         } else {
             const result = await response.json();
-            renderResults(result, document.getElementById('currency_symbol')?.value || '$');
+            renderResults(result, document.getElementById('currency_symbol').value);
         }
-
     } catch (error) {
-        console.error("Client-side error:", error);
+        console.error(error);
         errorMessage.textContent = `Error: ${error.message}`;
-        if (!isExport) {
-            resultsContainer.style.display = 'none';
-        }
     }
 }
 
-/**
- * Gathers all data from the form inputs.
- * @returns {object} The data object ready to be sent to the API.
- */
 function collectInputData() {
-    const data = {};
-    const years = parseInt(forecastYearsInput.value, 10);
+    const yearsOrMonths = parseInt(forecastYearsInput.value, 10);
+    const mode = periodModeInput.value;
     
-    // Helper to collect granular data lists
-    const collectList = (keyPrefix, isPercentage = false, defaultValueId) => {
+    // Determine how many inputs are currently visible on screen (Years)
+    // If mode is monthly (e.g. 24), we have 2 year inputs.
+    const inputCount = (mode === 'monthly') ? Math.ceil(yearsOrMonths / 12) : yearsOrMonths;
+
+    const collectList = (keyPrefix, isPct, defaultId) => {
         const list = [];
-        const factor = isPercentage ? 100 : 1;
+        const factor = isPct ? 100 : 1;
+        const defVal = parseFloat(document.getElementById(defaultId).value);
         
-        let defaultValue = 0; 
-        
-        const defaultElement = document.getElementById(defaultValueId);
-        if (defaultElement) {
-            defaultValue = parseFloat(defaultElement.value);
-        }
-
-
-        for (let i = 1; i <= years; i++) {
-            const input = document.getElementById(`${keyPrefix}_y${i}`);
-            
-            const value = parseFloat(input?.value);
-            
-            // If the input value is invalid (NaN or empty string), use the default value.
-            const finalValue = (isNaN(value) || input?.value === "") ? defaultValue : value;
-
-            list.push(finalValue / factor);
+        for (let i = 1; i <= inputCount; i++) {
+            const el = document.getElementById(`${keyPrefix}_y${i}`);
+            const val = el ? parseFloat(el.value) : defVal;
+            list.push((isNaN(val) ? defVal : val) / factor);
         }
         return list;
     };
-    
-    // --- Collect all granular lists ---
-    data.revenue_growth_rates = collectList('revenue_growth', true, 'default_revenue_growth'); 
-    data.cogs_pct_rates = collectList('cogs_pct', true, 'default_cogs_pct'); 
-    data.fixed_opex_rates = collectList('fixed_opex', false, 'default_fixed_opex'); 
-    data.capex_rates = collectList('capex', false, 'default_capex'); 
-    data.dso_days_list = collectList('dso_days', false, 'default_dso_days'); 
-    data.dio_days_list = collectList('dio_days', false, 'default_dio_days'); 
-    data.dpo_days_list = collectList('dpo_days', false, 'default_dpo_days'); 
-    data.annual_debt_repayment_list = collectList('debt_repayment', false, 'default_annual_debt_repayment'); 
 
-    // Collect scalar inputs
-    data.initial_revenue = parseFloat(document.getElementById('initial_revenue').value);
-    data.initial_ppe = parseFloat(document.getElementById('initial_ppe').value);
-    data.initial_debt = parseFloat(document.getElementById('initial_debt').value);
-    data.initial_cash = parseFloat(document.getElementById('initial_cash').value);
-    data.depreciation_rate = parseFloat(document.getElementById('depreciation_rate').value) / 100;
-    data.tax_rate = parseFloat(document.getElementById('tax_rate').value) / 100;
-    data.interest_rate = parseFloat(document.getElementById('interest_rate').value) / 100;
-    data.years = years;
-
-    // Validate all collected data 
-    for (const key in data) {
-        const value = data[key];
-        if (Array.isArray(value)) {
-            if (value.some(isNaN)) throw new Error(`Invalid number in list for ${key}.`);
-        } else {
-            if (isNaN(value)) throw new Error(`Invalid value for ${key}. Please fill all fields.`);
-        }
-    }
-    
-    return data;
+    return {
+        initial_revenue: parseFloat(document.getElementById('initial_revenue').value),
+        tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
+        initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
+        depreciation_rate: parseFloat(document.getElementById('depreciation_rate').value) / 100,
+        initial_debt: parseFloat(document.getElementById('initial_debt').value),
+        initial_cash: parseFloat(document.getElementById('initial_cash').value),
+        interest_rate: parseFloat(document.getElementById('interest_rate').value) / 100,
+        years: yearsOrMonths,
+        period_mode: mode,
+        
+        revenue_growth_rates: collectList('revenue_growth', true, 'default_revenue_growth'),
+        cogs_pct_rates: collectList('cogs_pct', true, 'default_cogs_pct'),
+        fixed_opex_rates: collectList('fixed_opex', false, 'default_fixed_opex'),
+        capex_rates: collectList('capex', false, 'default_capex'),
+        dso_days_list: collectList('dso_days', false, 'default_dso_days'),
+        dio_days_list: collectList('dio_days', false, 'default_dio_days'),
+        dpo_days_list: collectList('dpo_days', false, 'default_dpo_days'),
+        annual_debt_repayment_list: collectList('debt_repayment', false, 'default_annual_debt_repayment'),
+    };
 }
 
-/**
- * Handles the logic for triggering a file download from a response.
- * @param {Response} response The fetch response object.
- */
 async function handleFileDownload(response) {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.style.display = 'none';
     a.href = url;
-    a.download = 'Financial_Forecast.xlsx'; 
+    a.download = 'Financial_Forecast.xlsx';
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    errorMessage.textContent = 'Excel file downloaded successfully.';
+    errorMessage.textContent = '';
 }
 
-/**
- * Renders the forecast results into HTML tables and charts.
- * @param {object} data The forecast results from the backend.
- * @param {string} currencySymbol The selected currency symbol.
- */
-function renderResults(data, currencySymbol) {
-    [incomeStatementBody, balanceSheetBody, cashFlowBody].forEach(body => body.innerHTML = '');
+function renderResults(data, currency) {
+    const isBody = document.querySelector('#incomeStatementTable tbody');
+    const bsBody = document.querySelector('#balanceSheetTable tbody');
+    const cfBody = document.querySelector('#cashFlowTable tbody');
+    const isHead = document.querySelector('#incomeStatementTable thead');
+    const bsHead = document.querySelector('#balanceSheetTable thead');
+    const cfHead = document.querySelector('#cashFlowTable thead');
 
-    const format = (value) => `${value < 0 ? '-' : ''}${currencySymbol}${Math.abs(value).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    [isBody, bsBody, cfBody, isHead, bsHead, cfHead].forEach(el => el.innerHTML = '');
 
-    const allYears = data["Years"]; 
-    const is_cfs_years = allYears.slice(1); 
-    const bs_years = allYears; 
+    const format = (v) => `${v < 0 ? '-' : ''}${currency}${Math.abs(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
     
-    // Dynamically create table headers
-    const tableConfigs = [
-        { id: 'incomeStatementTable', years: is_cfs_years },
-        { id: 'balanceSheetTable', years: bs_years },
-        { id: 'cashFlowTable', years: is_cfs_years } 
-    ];
+    // Headers
+    // data["Years"] contains mixed types ["Start", "Month 1"...] or [0, 1, 2...]
+    const bsCols = data["Years"];
+    const isCols = data["Years"].slice(1);
 
-    tableConfigs.forEach(config => {
-        const thead = document.querySelector(`#${config.id} thead`);
-        thead.innerHTML = ''; 
-        const headerRow = thead.insertRow();
-        headerRow.insertCell().textContent = 'Line Item';
-        config.years.forEach(year => {
-            const cell = headerRow.insertCell();
-            cell.textContent = (config.id === 'balanceSheetTable' && year === 0) ? 'Year 0 (Initial)' : `Year ${year}`;
-        });
-    });
-
-    const insertDataRow = (config) => {
-        const row = config.tableBody.insertRow();
-        if (config.customClass) row.className = config.customClass;
-        if (config.isBold) row.style.fontWeight = 'bold';
-        row.insertCell().textContent = config.label;
-        
-        let rowData = config.dataKey ? (data[config.dataKey] || []) : config.calculation(data);
-        const yearsToRender = (config.tableBody === balanceSheetBody) ? bs_years : is_cfs_years;
-        const slicedData = rowData.slice(config.startIdx);
-        
-        yearsToRender.forEach((_, index) => {
-            const value = slicedData[index];
-            const cell = row.insertCell();
-            cell.textContent = (typeof value === 'number') ? format(config.isReversed ? -value : value) : '-';
-            cell.classList.add('data-cell');
+    const createHeader = (thead, cols) => {
+        const row = thead.insertRow();
+        row.insertCell().textContent = 'Line Item';
+        cols.forEach(c => {
+            let txt = c;
+            if (typeof c === 'number') txt = (c === 0) ? 'Year 0' : `Year ${c}`;
+            row.insertCell().textContent = txt;
         });
     };
-    
-     // Data definitions for rendering tables
-    const forecastData = [
-        // Income Statement
-        { label: "Revenue", dataKey: "Revenue", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
-        { label: "COGS", dataKey: "COGS", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Gross Profit", dataKey: "Gross Profit", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Fixed Operating Expenses", dataKey: "Fixed Opex", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Depreciation", dataKey: "Depreciation", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBIT", dataKey: "EBIT", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Interest Expense", dataKey: "Interest Expense", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "EBT", dataKey: "EBT", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Taxes", dataKey: "Taxes", tableBody: incomeStatementBody, startIdx: 1 },
-        { label: "Net Income", dataKey: "Net Income", tableBody: incomeStatementBody, startIdx: 1, isBold: true, customClass: 'heavy-total-row' },
 
-        // Balance Sheet
-        { label: "Cash", dataKey: "Closing Cash", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Accounts Receivable", dataKey: "Closing AR", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Inventory", dataKey: "Closing Inventory", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Net PP&E", dataKey: "Closing PP&E", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Total Assets", calculation: (d) => d["Closing Cash"].map((_, i) => d["Closing Cash"][i] + d["Closing AR"][i] + d["Closing Inventory"][i] + d["Closing PP&E"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
-        { label: "Accounts Payable", dataKey: "Closing AP", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Debt", dataKey: "Closing Debt", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Retained Earnings", dataKey: "Closing RE", tableBody: balanceSheetBody, startIdx: 0 },
-        { label: "Total Liabilities & Equity", calculation: (d) => d["Closing AP"].map((_, i) => d["Closing AP"][i] + d["Closing Debt"][i] + d["Closing RE"][i]), tableBody: balanceSheetBody, startIdx: 0, isBold: true, customClass: 'heavy-total-row' },
+    createHeader(isHead, isCols);
+    createHeader(bsHead, bsCols);
+    createHeader(cfHead, isCols);
 
-        // Cash Flow Statement
-        { label: "Net Income", dataKey: "Net Income", tableBody: cashFlowBody, startIdx: 1 },
-        { label: "Add: Depreciation", dataKey: "Depreciation", tableBody: cashFlowBody, startIdx: 1 },
-        { label: "Less: Change in NWC", dataKey: "Change in NWC", tableBody: cashFlowBody, startIdx: 1, isReversed: true },
-        { 
-            // Cash Flow from Operations is calculated here because its components are at the top-level
-            label: "Cash Flow from Operations", 
-            calculation: (d) => d["Net Income"].slice(1).map((val, i) => val + d["Depreciation"].slice(1)[i] - d["Change in NWC"].slice(1)[i]), 
-            tableBody: cashFlowBody, 
-            startIdx: 0, 
-            isBold: true, 
-            customClass: 'heavy-total-row' 
-        },
-        { 
-            label: "Cash Flow from Investing (CapEx)", 
-            calculation: (d) => d['excel_cfs']['Cash Flow from Investing (CapEx)'], 
-            tableBody: cashFlowBody, 
-            startIdx: 0, 
-            isBold: true, 
-            customClass: 'heavy-total-row' 
-        },
-        { 
-            label: "Cash Flow from Financing", 
-            calculation: (d) => d['excel_cfs']['Cash Flow from Financing'], 
-            tableBody: cashFlowBody, 
-            startIdx: 0, 
-            isBold: true, 
-            customClass: 'heavy-total-row' 
-        },
-        { 
-            // FIX: Use the data directly from the 'excel_cfs' dictionary, which is guaranteed to be Year 1 to N
-            label: "Net Change in Cash", 
-            calculation: (d) => d['excel_cfs']['Net Change in Cash'], 
-            tableBody: cashFlowBody, 
-            startIdx: 0, 
-            isBold: true, 
-            customClass: 'heavy-total-row' 
-        },
-    ];
+    const insertRow = (body, label, rowData, isBold=false, isReversed=false) => {
+        const row = body.insertRow();
+        if (isBold) row.className = 'heavy-total-row';
+        row.insertCell().textContent = label;
+        rowData.forEach(val => {
+            const cell = row.insertCell();
+            cell.textContent = format(isReversed ? -val : val);
+            cell.className = 'data-cell';
+        });
+    };
+
+    // Income Statement
+    insertRow(isBody, "Revenue", data["excel_is"]["Revenue"], true);
+    insertRow(isBody, "COGS", data["excel_is"]["COGS"]);
+    insertRow(isBody, "Gross Profit", data["excel_is"]["Gross Profit"], true);
+    insertRow(isBody, "Fixed Opex", data["excel_is"]["Fixed Operating Expenses"]);
+    insertRow(isBody, "Depreciation", data["excel_is"]["Depreciation"]);
+    insertRow(isBody, "EBIT", data["excel_is"]["EBIT"], true);
+    insertRow(isBody, "Interest", data["excel_is"]["Interest Expense"]);
+    insertRow(isBody, "Taxes", data["excel_is"]["Taxes"]);
+    insertRow(isBody, "Net Income", data["excel_is"]["Net Income"], true);
+
+    // Balance Sheet
+    insertRow(bsBody, "Cash", data["excel_bs"]["Cash"]);
+    insertRow(bsBody, "Accounts Receivable", data["excel_bs"]["Accounts Receivable"]);
+    insertRow(bsBody, "Inventory", data["excel_bs"]["Inventory"]);
+    insertRow(bsBody, "Net PP&E", data["excel_bs"]["Net PP&E"]);
+    insertRow(bsBody, "Total Assets", data["excel_bs"]["Total Assets"], true);
+    insertRow(bsBody, "Accounts Payable", data["excel_bs"]["Accounts Payable"]);
+    insertRow(bsBody, "Debt", data["excel_bs"]["Debt"]);
+    insertRow(bsBody, "Retained Earnings", data["excel_bs"]["Retained Earnings"]);
+    insertRow(bsBody, "Total Liab & Eq", data["excel_bs"]["Total Liabilities & Equity"], true);
+
+    // Cash Flow
+    // Note: The excel_cfs dict in backend is aligned to forecast periods
+    insertRow(cfBody, "Net Income", data["excel_cfs"]["Net Income"]);
+    insertRow(cfBody, "Add: Depreciation", data["excel_cfs"]["Add: Depreciation"]);
+    insertRow(cfBody, "Less: Change in NWC", data["excel_cfs"]["Less: Change in NWC"], false, true); // Already negative in data? check logic. 
+    // Logic in forecaster: change_in_nwc_cfs = [-x ...]. So it's negative. format handles sign. 
+    // Wait, the backend sends negative numbers for "Less...". 
+    // If we format -(-100) we get 100. If we format -100 we get -100.
+    // Let's stick to standard display: (100)
+    // Actually, in `excel_cfs` dict, I manually negated them in python? 
+    // Python: "Less: Change in NWC": [-x for x in change_in_nwc[1:]]
+    // So if NWC increased by 10, data is -10. Display should be -10.
+    // My insertRow `isReversed` param flips sign. I should NOT use isReversed here if data is already neg.
+    // The previous JS code used `isReversed` on the RAW `Change in NWC` list. Now we use `excel_cfs` processed list.
+    // Let's rely on data values directly.
     
-    forecastData.forEach(insertDataRow); 
-    
+    // Manually handle CFS to ensure order
+    const cfData = data["excel_cfs"];
+    insertRow(cfBody, "Cash Flow Operations", cfData["Cash Flow from Operations"], true);
+    insertRow(cfBody, "Cash Flow Investing", cfData["Cash Flow from Investing (CapEx)"], true);
+    insertRow(cfBody, "Cash Flow Financing", cfData["Cash Flow from Financing"], true);
+    insertRow(cfBody, "Net Change in Cash", cfData["Net Change in Cash"], true);
+
     renderCharts(data);
     resultsContainer.style.display = 'block';
+    
+    // Auto switch to Income tab
+    document.querySelector('.tab-link').click();
 }
 
-/**
- * Renders/updates the charts with new forecast data.
- * @param {object} data The forecast results from the backend.
- */
 function renderCharts(data) {
-    const years = data["Years"].slice(1).map(y => `Year ${y}`);
-    const ebitPct = data["Revenue"].slice(1).map((rev, i) => rev === 0 ? 0 : (data["EBIT"].slice(1)[i] / rev) * 100);
-
-    const chartConfigs = [{
-        chartVar: 'revenueChart', canvasId: 'revenueKpiChart', config: {
-            type: 'bar',
-            data: { labels: years, datasets: [
-                { label: 'Revenue', data: data["Revenue"].slice(1), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
-                { label: 'Net Income', data: data["Net Income"].slice(1), backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'y' },
-                { type: 'line', label: 'EBIT %', data: ebitPct, borderColor: 'rgb(255, 99, 132)', borderWidth: 3, fill: false, yAxisID: 'y1' }
-            ]},
-            options: { responsive: true, interaction: { mode: 'index', intersect: false }, scales: {
-                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Amount' } },
-                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Percentage (%)' } }
-            }, plugins: { title: { display: true, text: 'Profitability Trends' } } }
-        }
-    }, {
-        chartVar: 'cashDebtChart', canvasId: 'cashDebtChart', config: {
-            type: 'bar',
-            data: { labels: years, datasets: [
-                { label: 'Closing Cash', data: data["Closing Cash"].slice(1), backgroundColor: 'rgba(255, 159, 64, 0.7)' },
-                { label: 'Closing Debt', data: data["Closing Debt"].slice(1), backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-            ]},
-            options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { title: { display: true, text: 'Liquidity & Capital Structure' } } }
-        }
-    }];
-
-    // Using a map to hold chart instances { 'revenueChart': chartInstance }
-    const charts = { revenueChart, cashDebtChart };
-
-    chartConfigs.forEach(cfg => {
-        if (charts[cfg.chartVar]) charts[cfg.chartVar].destroy();
-        charts[cfg.chartVar] = new Chart(document.getElementById(cfg.canvasId).getContext('2d'), cfg.config);
+    const labels = data["Years"].slice(1).map(x => typeof x === 'number' ? `Year ${x}` : x);
+    
+    // Simple Chart Data
+    const rev = data["Revenue"].slice(1);
+    const ni = data["Net Income"].slice(1);
+    const cash = data["Closing Cash"].slice(1);
+    
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(document.getElementById('revenueKpiChart'), {
+        type: 'bar',
+        data: { labels: labels, datasets: [
+            { label: 'Revenue', data: rev, backgroundColor: '#36a2eb' },
+            { label: 'Net Income', data: ni, backgroundColor: '#4bc0c0' }
+        ]},
+        options: { responsive: true, plugins: { title: { display: true, text: 'Profitability' } } }
     });
 
-    // Re-assign global variables
-    revenueChart = charts.revenueChart;
-    cashDebtChart = charts.cashDebtChart;
+    if (cashDebtChart) cashDebtChart.destroy();
+    cashDebtChart = new Chart(document.getElementById('cashDebtChart'), {
+        type: 'line',
+        data: { labels: labels, datasets: [
+            { label: 'Cash Balance', data: cash, borderColor: '#ff9f40', fill: true }
+        ]},
+        options: { responsive: true, plugins: { title: { display: true, text: 'Cash Position' } } }
+    });
 }
 
-
-// --- Initial Setup ---
-// Set the initial visibility of revenue growth inputs when the page loads
+// Init
 document.addEventListener('DOMContentLoaded', () => {
-    const years = 3;
-    createAllGranularInputs(years);      
+    createAllGranularInputs(3);
 });
