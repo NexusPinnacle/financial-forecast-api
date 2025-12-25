@@ -1,273 +1,273 @@
+/* General Reset & Body */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f4f7f6;
     color: #333;
     margin: 0;
     padding: 20px;
 }
 
-.container {
-    max-width: 1050px;
-    margin: 0 auto;
-    background: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-h1, h2 {
-    color: #3b84f5; /* A nice blue color */
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-}
-
-/* Input Form Styling */
-.input-group {
-    display: flex;
-    justify-content: space-between;
+h1, h2, h3, h4 {
+    color: #2c3e50;
     margin-bottom: 15px;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+/* --- Top Navigation Bar --- */
+.top-nav {
+    display: flex;
+    justify-content: center;
+    background-color: #1e6f5c; /* Matches your export button theme */
+    padding: 15px 0;
+    margin-bottom: 25px;
+    border-radius: 8px 8px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.nav-btn {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin: 0 10px;
+    padding: 10px 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn.active {
+    background-color: white;
+    color: #1e6f5c;
+    border-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Page Section Animations */
+.page-section {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Form Elements */
+.input-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.left-pane, .right-pane {
+    flex: 1;
+    min-width: 300px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
 }
 
-label {
-    flex-basis: 75%;
-    font-weight: bold;
+.input-group label {
+    flex-basis: 60%;
+    font-size: 0.95em;
 }
 
-input[type="number"], select {
-    flex-basis: 25%;
+.input-group input, .input-group select {
+    flex-basis: 35%;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    text-align: right;
 }
 
+/* Buttons */
 button {
-    background-color: #003b5c; /* #28a745 Green for action */
-    color: white;
-    padding: 12px 20px;
+    padding: 10px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 1em;
     transition: background-color 0.3s;
-    width: 100%; /* Default to full width for main buttons */
 }
 
-button:hover {
-    background-color: #00568c;
-}
-
-/* Year selection buttons (smaller, inline) */
-.year-select-btn {
-    width: auto;
-    padding: 8px 15px;
-    background-color: #f0f0f0;
-    color: #333;
-    border: 1px solid #ccc;
-    font-size: 14px;
-}
-
-.year-select-btn:hover {
-    background-color: #e0e0e0;
-}
-
-.selected-year-btn {
-    /* Style for the currently selected button */
-    background-color: #3b84f5; /* Match your H1 color */
+#calculateBtn {
+    background-color: #28a745;
     color: white;
-    font-weight: bold;
-    border-color: #3b84f5;
+    width: 100%;
+    font-size: 1.1em;
+    margin-top: 30px;
+    padding: 15px;
 }
 
-/* --- Two-Pane Layout for Inputs --- */
-.input-layout {
-    display: flex; /* Use flexbox for the two panes */
-    gap: 40px;
+#calculateBtn:hover { background-color: #218838; }
+
+#exportBtn {
+    background-color: #1e6f5c;
+    color: white;
     margin-top: 20px;
 }
 
-.left-pane {
-    flex-basis: 50%;
-    min-width: 45%;
-    /* Highlight the division */
-    padding-right: 20px; 
-    border-right: 1px solid #eee;
+#exportBtn:hover { background-color: #144d40; }
+
+.year-select-btn {
+    background-color: #e2e6ea;
+    color: #333;
 }
 
-.right-pane {
-    flex-basis: 50%;
-    min-width: 45%;
+.year-select-btn.selected-year-btn {
+    background-color: #007bff;
+    color: white;
 }
 
-/* Granular Section Spacing */
+/* --- Granular Inputs --- */
 .granular-section {
-    margin-bottom: 10px; /* Reduced margin to improve compactness */
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
-/* Adjust button to span the full width of the main container again */
-#calculateBtn, #exportBtn {
-    width: calc(100%); /* 100% of max-width - padding on container */
-    max-width: 1050px;
+.collapsible-header {
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95em;
+    user-select: none;
 }
 
-.error-message {
-    color: #dc3545;
+.collapsible-header:hover { background-color: #e2e6ea; }
+
+.toggle-icon {
+    font-size: 0.8em;
+    transition: transform 0.3s ease;
+}
+
+.collapsible-header.collapsed .toggle-icon { transform: rotate(-90deg); }
+
+.collapsible-content {
+    padding: 15px;
+    background-color: #fff;
+    display: block; 
+    border-top: 1px solid #ddd;
+}
+
+.collapsible-content:not(.expanded-content) { display: none; }
+
+.granular-input-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.granular-year-input {
+    display: flex;
+    flex-direction: column;
+    width: 60px; 
+}
+
+.granular-year-input label {
+    font-size: 0.75em;
+    margin-bottom: 2px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.granular-year-input input {
+    padding: 4px;
+    font-size: 0.85em;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.granular-row-label {
     font-weight: bold;
-    margin-top: 15px;
+    margin: 0 0 5px 0;
+    font-size: 0.9em;
+    color: #555;
 }
 
-/* Results Tables */
+/* --- Results Tables (Updated for Horizontal Scrolling) --- */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto; /* Enables horizontal scrolling */
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    min-width: 800px; /* Ensures columns don't get too squashed */
     font-size: 0.9em;
 }
 
 th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
     text-align: right;
+    white-space: nowrap; /* Prevents text wrapping in cells */
 }
 
+th {
+    background-color: #f1f1f1;
+    font-weight: 600;
+}
+
+/* Sticky First Column */
 th:first-child, td:first-child {
     text-align: left;
-    background-color: #f7f7f7;
+    position: sticky;
+    left: 0;
+    background-color: #fff; /* Opaque background so data doesn't show through */
+    z-index: 10;
+    border-right: 2px solid #eee;
+    min-width: 200px;
+}
+
+th:first-child {
+    background-color: #f1f1f1;
+    z-index: 11; /* Higher than data cells */
+}
+
+.heavy-total-row td {
     font-weight: bold;
+    background-color: #f9f9f9;
+    border-top: 2px solid #ccc;
 }
 
-thead th {
-    background-color: #f0f0f0;
-    color: #333;
-}
+/* Error Messages & Tooltips */
+.error-message { color: red; margin-top: 10px; font-weight: bold; }
 
-.heavy-total-row {
-    border-top: 2px solid #000;
-}
-
-.data-cell {
-    font-family: 'Courier New', monospace; /* Use monospaced font for numbers */
-}
-
-/* Tooltip Styling */
 .tooltip-trigger {
     cursor: help;
-    color: #3b84f5;
+    font-size: 0.9em;
     margin-left: 5px;
 }
-
-/* --- NEW COLLAPSE/EXPAND STYLES --- */
-.collapsible-header {
-    cursor: pointer;
-    background-color: #f7f7f7;
-    padding: 10px;
-    border: 1px solid #ddd;
-    margin: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-    font-size: 1.1em;
-    font-weight: normal; /* Override h4 default bold */
-}
-
-.collapsible-header:hover {
-    background-color: #eee;
-}
-
-.toggle-icon {
-    transition: transform 0.3s ease;
-    font-weight: bold;
-}
-
-/* Rotate icon when the header is not collapsed */
-.collapsible-header:not(.collapsed) .toggle-icon {
-    transform: rotate(180deg);
-}
-
-.collapsible-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-in-out;
-    padding: 0 10px;
-    border: 1px solid #ddd;
-    border-top: none;
-}
-
-.collapsible-content.expanded-content {
-    /* Set max-height large enough to hold all content (e.g., 10 * 15px height + padding) */
-    max-height: 500px; 
-    padding-bottom: 15px; 
-}
-
-/* Re-ensure standard vertical input group styling within the collapsible content */
-.collapsible-content .input-group {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    margin-top: 10px;
-    align-items: center;
-}
-
-
-/* --- New Granular Horizontal Layout Styles --- */
-
-/* Container for all inputs in a granular category (e.g., all Revenue Growth years) */
-.granular-input-row {
-    display: flex;
-    flex-wrap: nowrap; /* Keep all years on one line */
-    overflow-x: auto; /* Allow horizontal scrolling if many years are selected (e.g., 10) */
-    gap: 10px; /* Spacing between year inputs */
-    padding: 10px 0;
-    border-bottom: 1px solid #eee; /* Separate different assumption types */
-}
-
-/* Individual year input block */
-.granular-year-input {
-    /* Set a minimum width for inputs to ensure they're usable */
-    min-width: 80px; 
-    display: flex;
-    flex-direction: column; /* Label on top, input below */
-    align-items: center;
-    flex-shrink: 0; /* Important: prevents items from shrinking too much on smaller screens */
-}
-
-/* Label for the entire row (e.g., "Revenue Growth") */
-.granular-row-label {
-    font-weight: bold;
-    margin: 5px 0 0 0;
-    padding-left: 5px;
-    border-left: 4px solid #3b84f5; /* Visual cue */
-}
-
-/* Style the year label inside the horizontal block */
-.granular-year-input label {
-    flex-basis: auto;
-    font-weight: normal;
-    font-size: 0.85em; /* Smaller label */
-    margin-bottom: 3px;
-    text-align: center;
-}
-
-/* Style the year input field inside the horizontal block */
-.granular-year-input input[type="number"] {
-    flex-basis: auto;
-    width: 65px; /* Fixed width for compactness */
-    text-align: center;
-    padding: 5px;
-    font-size: 0.9em;
-}
-
-/* Remove the redundant vertical input-group styling within the granular section */
-.collapsible-content .input-group {
-    /* This overrides the old vertical input-group style in the granular section */
-    display: none; 
-}
-
-/* Re-add specific padding for the content container for visual appeal */
-.collapsible-content.expanded-content {
-    max-height: 500px; 
-    padding: 5px 10px 15px 10px; /* Adjusted padding */
-}
-
