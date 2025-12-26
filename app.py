@@ -60,7 +60,15 @@ def export_to_excel():
         d = results['display_data']
         is_map = {k: d[k] for k in ["Revenue", "COGS", "Gross Profit", "Fixed Opex", "Depreciation", "EBIT", "Interest", "Taxes", "Net Income"]}
         bs_map = {k: d[k] for k in ["Cash", "AR", "Inventory", "PPE", "Total Assets", "AP", "Debt", "RE", "Total LiabEq"]}
-        cf_map = { "Net Income": d["CF_NI"], "Depreciation": d["CF_Dep"], "NWC Change": d["CF_NWC"], "CFO": d["CFO"], "CFI": d["CFI"], "CFF": d["CFF"], "Net Change": d["Net Cash Change"]}
+        cf_map = { 
+            "Net Income": d["CF_NI"], 
+            "Depreciation": d["CF_Dep"], 
+            "NWC Change": d["CF_NWC"], 
+            "CFO": d["CFO"], 
+            "CFI": d["CFI"] if len(d["CFI"]) == len(labels_is) else d["CFI"][1:], # Alignment Fix
+            "CFF": d["CFF"], 
+            "Net Change": d["Net Cash Change"]
+        }
 
         pd.DataFrame(is_map, index=labels_is).T.to_excel(writer, sheet_name='Income Statement')
         pd.DataFrame(bs_map, index=labels_all).T.to_excel(writer, sheet_name='Balance Sheet')
