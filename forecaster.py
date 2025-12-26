@@ -18,188 +18,160 @@ def generate_forecast(
     interest_rate,
     annual_debt_repayment_list,
     years=3,
-    monthly_years=1  # Number of years to break down into monthly periods
+    period_mode='annual'
 ):
-    """
-    Calculates a hybrid financial forecast.
-    Example: years=3, monthly_years=1 creates 12 months (Year 1) + 2 annual steps (Year 2, 3).
-    """
+    # Setup Periods
+    if period_mode == 'monthly':
+        num_periods = years  # years here is actually month count (e.g., 36)
+        days_in_period = 365.0 / 12.0
+        
+        def expand(annual_list):
+            """Repeats annual assumption for each of the 12 months in that year."""
+            monthly = []
+            for val in annual_list:
+                monthly.extend([val] * 12)
+            # Ensure we match num_periods exactly
+            return monthly[:num_periods]
 
-    # --- 1. TIMELINE CONSTRUCTION ---
-    # Define the structure of each period to ensure calculations match the time-scale
-    timeline = []
+        # Convert Annual assumptions to Monthly
+        # Growth is compounded: (1+r)^(1/12)-1
+        rev_growth = [((1 + r)**(1/12) - 1) for r in expand(revenue_growth_rates)]
+        cogs_pct = expand(cogs_pct_rates)
+        # Amounts are divided by 12
+        fixed_opex_list = [x / 12.0 for x in expand(fixed_opex_rates)]
+        capex_list = [x / 12.0 for x in expand(capex_rates)]
+        debt_repayment_list = [x / 12.0 for x in expand(annual_debt_repayment_list)]
+        
+        dep_rate_period = (depreciation_rate / 100.0) / 12.0
+        int_rate_period = (interest_rate / 100.0) / 12.0
+        tax_r = tax_rate / 100.0
+        
+        dso_list = expand(dso_days_list)
+        dio_list = expand(dio_days_list)
+        dpo_list = expand(dpo_days_list)
+        
+        labels = ["Initial"] + [f"M{i+1}" for i in range(num_periods)]
+    else:
+        num_periods = years
+        days_in_period = 365.0
+        rev_growth = revenue_growth_rates
+        cogs_pct = cogs_pct_rates
+        fixed_opex_list = fixed_opex_rates
+        capex_list = capex_rates
+        debt_repayment_list = annual_debt_repayment_list
+        dep_rate_period = depreciation_rate / 100.0
+        int_rate_period = interest_rate / 100.0
+        tax_r = tax_rate / 100.0
+        dso_list = dso_days_list
+        dio_list = dio_days_list
+        dpo_list = dpo_days_list
+        labels = ["Initial"] + [f"Year {i+1}" for i in range(num_periods)]
+
+    # --- Financial Logic Loop ---
+    revenue = [initial_revenue]
+    cogs = [0.0]
+    gross_profit = [0.0]
+    ebit = [0.0]
+    net_income = [0.0]
     
-    # Generate Monthly slots
-    for y in range(monthly_years):
-        for m in range(1, 13):
-            timeline.append({
-                'label': f"M{m + (y*12)}", 
-                'type': 'month', 
-                'year_idx': y,
-                'days': 365.0 / 12.0
-            })
-            
-    # Generate remaining Annual slots
-    for y in range(monthly_years, years):
-        timeline.append({
-            'label': f"Y{y+1}", 
-            'type': 'year', 
-            'year_idx': y,
-            'days': 365.0
-        })
+    cash_closing = [initial_cash]
+    ar_closing = [0.0] # Will calc in loop
+    inventory_closing = [0.0]
+    ppe_closing = [initial_ppe]
+    ap_closing = [0.0]
+    debt_closing = [initial_debt]
+    retained_earnings = [0.0]
 
-    num_periods = len(timeline)
-    L = num_periods + 1 # Include Period 0 (Baseline)
+    # Initialize AR/Inv/AP based on initial revenue/cogs assumptions for Day 0
+    ar_closing[0] = (initial_revenue / 365.0) * dso_list[0]
+    # Estimate initial COGS for NWC starting point
+    init_cogs = initial_revenue * cogs_pct[0]
+    inventory_closing[0] = (init_cogs / 365.0) * dio_list[0]
+    ap_closing[0] = (init_cogs / 365.0) * dpo_list[0]
 
-    # --- 2. INPUT EXPANSION LOGIC ---
-    # We expand the user's annual assumptions to match the timeline.
-    # We also handle 'Flow' vs 'Rate' conversions.
-    def expand_assumptions(annual_list, is_flow_item=False):
-        expanded = []
-        # Pad the list if user provided fewer years than the total forecast
-        vals = annual_list + [annual_list[-1]] * (years - len(annual_list))
+    depreciation = [0.0]
+    interest_expense = [0.0]
+    taxes = [0.0]
+    ebt = [0.0]
+
+    for i in range(num_periods):
+        # IS
+        rev = revenue[-1] * (1 + rev_growth[i])
+        revenue.append(rev)
         
-        for period in timeline:
-            val = vals[period['year_idx']]
-            if period['type'] == 'month':
-                if is_flow_item:
-                    # Revenue/Opex/CapEx: Divide annual target by 12
-                    expanded.append(val / 12.0)
-                elif annual_list is revenue_growth_rates:
-                    # Growth: Convert annual rate to monthly compounding: (1+r)^(1/12) - 1
-                    expanded.append((1 + val)**(1/12) - 1)
-                else:
-                    # Ratios (COGS%, DSO): Stay the same
-                    expanded.append(val)
-            else:
-                expanded.append(val)
-        return expanded
-
-    # Map the lists
-    calc_rev_growth = expand_assumptions(revenue_growth_rates)
-    calc_cogs_pct = expand_assumptions(cogs_pct_rates)
-    calc_fixed_opex = expand_assumptions(fixed_opex_rates, is_flow_item=True)
-    calc_capex = expand_assumptions(capex_rates, is_flow_item=True)
-    calc_dso = expand_assumptions(dso_days_list)
-    calc_dio = expand_assumptions(dio_days_list)
-    calc_dpo = expand_assumptions(dpo_days_list)
-    calc_debt_repay = expand_assumptions(annual_debt_repayment_list, is_flow_item=True)
-
-    # --- 3. INITIALIZATION ---
-    revenue = [0.0] * L
-    cogs = [0.0] * L
-    gross_profit = [0.0] * L
-    fixed_opex_list = [0.0] * L
-    depreciation = [0.0] * L
-    ebit = [0.0] * L
-    interest_expense = [0.0] * L
-    ebt = [0.0] * L
-    taxes = [0.0] * L
-    net_income = [0.0] * L
-
-    ar_closing = [0.0] * L
-    inventory_closing = [0.0] * L
-    ppe_closing = [0.0] * L
-    ap_closing = [0.0] * L
-    debt_closing = [0.0] * L
-    retained_earnings = [0.0] * L
-    cash_closing = [0.0] * L
-    total_assets = [0.0] * L
-    total_liabilities_equity = [0.0] * L
-    
-    change_in_nwc = [0.0] * L
-    cash_flow_from_financing = [0.0] * L
-    net_change_in_cash = [0.0] * L
-
-    # --- 4. PERIOD 0 (BASELINE SETUP) ---
-    revenue[0] = initial_revenue 
-    ppe_closing[0] = initial_ppe
-    debt_closing[0] = initial_debt
-    cash_closing[0] = initial_cash
-    
-    # Calculate initial Working Capital based on initial Revenue
-    ar_closing[0] = (initial_revenue / 365.0) * calc_dso[0]
-    inventory_closing[0] = (initial_revenue * calc_cogs_pct[0] / 365.0) * calc_dio[0]
-    ap_closing[0] = (initial_revenue * calc_cogs_pct[0] / 365.0) * calc_dpo[0]
-    
-    retained_earnings[0] = (cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]) - \
-                           (ap_closing[0] + debt_closing[0])
-    total_assets[0] = cash_closing[0] + ar_closing[0] + inventory_closing[0] + ppe_closing[0]
-    total_liabilities_equity[0] = ap_closing[0] + debt_closing[0] + retained_earnings[0]
-
-    # --- 5. RECURSIVE CALCULATION LOOP ---
-    for i in range(1, L):
-        idx = i - 1
-        p = timeline[idx]
+        c = rev * cogs_pct[i]
+        cogs.append(c)
+        gross_profit.append(rev - c)
         
-        # Determine Period Rates (Depreciation/Interest)
-        period_factor = 12.0 if p['type'] == 'month' else 1.0
-        p_depr_rate = depreciation_rate / period_factor
-        p_int_rate = interest_rate / period_factor
+        op_ex = fixed_opex_list[i]
+        dep = ppe_closing[-1] * dep_rate_period
+        depreciation.append(dep)
+        
+        this_ebit = rev - c - op_ex - dep
+        ebit.append(this_ebit)
+        
+        inte = debt_closing[-1] * int_rate_period
+        interest_expense.append(inte)
+        
+        this_ebt = this_ebit - inte
+        ebt.append(this_ebt)
+        
+        t = max(0, this_ebt * tax_r)
+        taxes.append(t)
+        
+        ni = this_ebt - t
+        net_income.append(ni)
+        
+        # BS
+        new_ppe = ppe_closing[-1] + capex_list[i] - dep
+        ppe_closing.append(new_ppe)
+        
+        new_debt = max(0, debt_closing[-1] - debt_repayment_list[i])
+        debt_closing.append(new_debt)
+        
+        ar = (rev / days_in_period) * dso_list[i]
+        ar_closing.append(ar)
+        
+        inv = (c / days_in_period) * dio_list[i]
+        inventory_closing.append(inv)
+        
+        ap = (c / days_in_period) * dpo_list[i]
+        ap_closing.append(ap)
+        
+        re = retained_earnings[-1] + ni
+        retained_earnings.append(re)
+        
+        # Cash Flow / Plug
+        assets_ex_cash = ar + inv + new_ppe
+        liabs_equity = ap + new_debt + re
+        cash_closing.append(liabs_equity - assets_ex_cash)
 
-        # Income Statement
-        revenue[i] = revenue[i-1] * (1 + calc_rev_growth[idx])
-        cogs[i] = revenue[i] * calc_cogs_pct[idx]
-        gross_profit[i] = revenue[i] - cogs[i]
-        fixed_opex_list[i] = calc_fixed_opex[idx]
-        depreciation[i] = ppe_closing[i-1] * p_depr_rate
-        
-        ebit[i] = gross_profit[i] - fixed_opex_list[i] - depreciation[i]
-        interest_expense[i] = debt_closing[i-1] * p_int_rate
-        ebt[i] = ebit[i] - interest_expense[i]
-        taxes[i] = max(0, ebt[i]) * tax_rate
-        net_income[i] = ebt[i] - taxes[i]
-        
-        # Balance Sheet (Working Capital)
-        # Using 365 as the annualizer regardless of period type for consistent DSO logic
-        ar_closing[i] = (revenue[i] * (12 if p['type'] == 'month' else 1) / 365.0) * calc_dso[idx]
-        inventory_closing[i] = (cogs[i] * (12 if p['type'] == 'month' else 1) / 365.0) * calc_dio[idx]
-        ap_closing[i] = (cogs[i] * (12 if p['type'] == 'month' else 1) / 365.0) * calc_dpo[idx]
-        
-        change_in_nwc[i] = (ar_closing[i] + inventory_closing[i] - ap_closing[i]) - \
-                           (ar_closing[i-1] + inventory_closing[i-1] - ap_closing[i-1])
-        
-        # Balance Sheet (Long Term)
-        ppe_closing[i] = ppe_closing[i-1] + calc_capex[idx] - depreciation[i]
-        debt_repaid = min(calc_debt_repay[idx], debt_closing[i-1])
-        debt_closing[i] = debt_closing[i-1] - debt_repaid
-        retained_earnings[i] = retained_earnings[i-1] + net_income[i]
-        
-        # Cash Flow Statement
-        cash_flow_from_financing[i] = -debt_repaid
-        cfo = net_income[i] + depreciation[i] - change_in_nwc[i]
-        cfi = -calc_capex[idx]
-        net_change_in_cash[i] = cfo + cfi + cash_flow_from_financing[i]
-        cash_closing[i] = cash_closing[i-1] + net_change_in_cash[i]
-        
-        # Integrity Check
-        total_assets[i] = cash_closing[i] + ar_closing[i] + inventory_closing[i] + ppe_closing[i]
-        total_liabilities_equity[i] = ap_closing[i] + debt_closing[i] + retained_earnings[i]
+    # Calculate Cash Flow steps for the table
+    cash_flow_from_ops = [0.0]
+    for i in range(1, len(net_income)):
+        # Simple CFO: NI + Dep - Delta AR - Delta Inv + Delta AP
+        delta_ar = ar_closing[i] - ar_closing[i-1]
+        delta_inv = inventory_closing[i] - inventory_closing[i-1]
+        delta_ap = ap_closing[i] - ap_closing[i-1]
+        cfo = net_income[i] + depreciation[i] - delta_ar - delta_inv + delta_ap
+        cash_flow_from_ops.append(cfo)
 
-    # --- 6. DATA PACKAGING ---
-    labels = ["Start"] + [p['label'] for p in timeline]
-    
     return {
-        "Labels": labels,
+        "Years": labels,
         "Revenue": revenue,
         "Net Income": net_income,
         "Closing Cash": cash_closing,
         "excel_is": {
-            "Revenue": revenue[1:], "COGS": cogs[1:], "Gross Profit": gross_profit[1:],
-            "Fixed Operating Expenses": fixed_opex_list[1:], "Depreciation": depreciation[1:], 
-            "EBIT": ebit[1:], "Interest Expense": interest_expense[1:], "Net Income": net_income[1:]
+            "Revenue": revenue, "COGS": cogs, "EBIT": ebit, "Net Income": net_income
         },
         "excel_bs": {
-            "Cash": cash_closing, "Accounts Receivable": ar_closing, "Inventory": inventory_closing,
-            "Net PP&E": ppe_closing, "Total Assets": total_assets, "Accounts Payable": ap_closing,
-            "Debt": debt_closing, "Retained Earnings": retained_earnings, "Total Liabilities & Equity": total_liabilities_equity
+            "Cash": cash_closing, "AR": ar_closing, "Inventory": inventory_closing, 
+            "PP&E": ppe_closing, "AP": ap_closing, "Debt": debt_closing, "RE": retained_earnings
         },
         "excel_cfs": {
-            "Net Income": net_income[1:], "Add: Depreciation": depreciation[1:],
-            "Less: Change in NWC": [-x for x in change_in_nwc[1:]],
-            "Cash Flow from Operations": [net_income[i] + depreciation[i] - change_in_nwc[i] for i in range(1, L)],
-            "Cash Flow from Investing (CapEx)": [-x for x in calc_capex],
-            "Cash Flow from Financing": cash_flow_from_financing[1:],
-            "Net Change in Cash": net_change_in_cash[1:]
+            "Cash From Operations": cash_flow_from_ops,
+            "CapEx": [0] + [-x for x in capex_list],
+            "Debt Repayment": [0] + [-x for x in debt_repayment_list],
+            "Net Change in Cash": [0] + [cash_closing[i] - cash_closing[i-1] for i in range(1, len(cash_closing))]
         }
     }
