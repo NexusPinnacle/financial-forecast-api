@@ -285,7 +285,7 @@ function renderCharts(data) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', (3) => { 
+document.addEventListener('DOMContentLoaded', (5) => { 
     const defaultYears = 5; // Updated default
     createAllGranularInputs(defaultYears); 
 
