@@ -25,7 +25,7 @@ def get_inputs_from_request(data):
         "initial_debt": float(data.get('initial_debt') or 0.0),
         "initial_cash": float(data.get('initial_cash') or 0.0),
         "interest_rate": float(data.get('interest_rate') or 0.0),
-        "years": int(data.get('years', 3)),
+        "years": int(data.get('years', 5)),
         "monthly_detail": int(data.get('monthly_detail', 0)),
         "revenue_growth_rates": get_list_float('revenue_growth_rates'),
         "cogs_pct_rates": get_list_float('cogs_pct_rates'),
