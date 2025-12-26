@@ -151,7 +151,7 @@ def generate_forecast(
             "CF_Dep": get_display_val(dep)[1:],
             "CF_NWC": [-x for x in get_display_val(change_nwc)[1:]],
             "CFO": [ (d_ni[i] + get_display_val(dep)[1:][i] - get_display_val(change_nwc)[1:][i]) for i in range(len(d_ni))],
-            "CFI": [-x for x in get_display_val(capex_monthly)], # simplification for aggregation
+            "CFI": [-x for x in get_display_val(capex_monthly)[1:]],
             "CFF": get_display_val(cff)[1:],
             "Net Cash Change": get_display_val(net_cash)[1:]
         }
