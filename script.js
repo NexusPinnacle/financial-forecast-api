@@ -72,8 +72,17 @@ function createAllGranularInputs(numYears) {
 
 annualButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-        annualButtons.forEach(b => b.classList.remove('active'));
+        // 1. Remove BOTH potential active classes from all buttons
+        annualButtons.forEach(b => {
+            b.classList.remove('active');
+            b.classList.remove('selected-year-btn');
+        });
+
+        // 2. Add BOTH classes to the clicked button
         btn.classList.add('active');
+        btn.classList.add('selected-year-btn');
+
+        // 3. Update the values
         const val = parseInt(btn.getAttribute('data-value'));
         forecastYearsInput.value = val;
         createAllGranularInputs(val);
