@@ -6,7 +6,7 @@ def generate_forecast(
     tax_rate, initial_ppe, capex_rates, depreciation_rate,
     dso_days_list, dio_days_list, dpo_days_list,
     initial_debt, initial_cash, interest_rate,
-    annual_debt_repayment_list, years=3, monthly_detail=0
+    annual_debt_repayment_list, years=5, monthly_detail=0
 ):
     # --- 1. SETUP PERIODS (Always Monthly internally) ---
     num_months = years * 12
