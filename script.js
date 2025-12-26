@@ -285,7 +285,18 @@ function renderCharts(data) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', (5) => { 
-    const defaultYears = 5; // Updated default
+document.addEventListener('DOMContentLoaded', () => { 
+    const defaultYears = 5; 
+    
+    // Set the hidden input value so the first submit works
+    forecastYearsInput.value = defaultYears;
+    
+    // Generate the initial UI boxes
     createAllGranularInputs(defaultYears); 
 
+    // Highlight the 5Y button visually on load
+    const defaultBtn = document.querySelector(`.year-select-btn[data-value="${defaultYears}"]`);
+    if (defaultBtn) {
+        defaultBtn.classList.add('active', 'selected-year-btn');
+    }
+});
