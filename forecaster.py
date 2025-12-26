@@ -2,176 +2,157 @@ import pandas as pd
 import numpy as np
 
 def generate_forecast(
-    initial_revenue,
-    revenue_growth_rates, 
-    cogs_pct_rates, 
-    fixed_opex_rates,
-    tax_rate,
-    initial_ppe,
-    capex_rates,
-    depreciation_rate,
-    dso_days_list,
-    dio_days_list,
-    dpo_days_list,
-    initial_debt,       
-    initial_cash,       
-    interest_rate,
-    annual_debt_repayment_list,
-    years=3,
-    period_mode='annual'
+    initial_revenue, revenue_growth_rates, cogs_pct_rates, fixed_opex_rates,
+    tax_rate, initial_ppe, capex_rates, depreciation_rate,
+    dso_days_list, dio_days_list, dpo_days_list,
+    initial_debt, initial_cash, interest_rate,
+    annual_debt_repayment_list, years=3, monthly_detail=0
 ):
-    # Setup Periods
-    if period_mode == 'monthly':
-        num_periods = years  # years here is actually month count (e.g., 36)
-        days_in_period = 365.0 / 12.0
-        
-        def expand(annual_list):
-            """Repeats annual assumption for each of the 12 months in that year."""
-            monthly = []
-            for val in annual_list:
-                monthly.extend([val] * 12)
-            # Ensure we match num_periods exactly
-            return monthly[:num_periods]
-
-        # Convert Annual assumptions to Monthly
-        # Growth is compounded: (1+r)^(1/12)-1
-        rev_growth = [((1 + r)**(1/12) - 1) for r in expand(revenue_growth_rates)]
-        cogs_pct = expand(cogs_pct_rates)
-        # Amounts are divided by 12
-        fixed_opex_list = [x / 12.0 for x in expand(fixed_opex_rates)]
-        capex_list = [x / 12.0 for x in expand(capex_rates)]
-        debt_repayment_list = [x / 12.0 for x in expand(annual_debt_repayment_list)]
-        
-        dep_rate_period = (depreciation_rate / 100.0) / 12.0
-        int_rate_period = (interest_rate / 100.0) / 12.0
-        tax_r = tax_rate / 100.0
-        
-        dso_list = expand(dso_days_list)
-        dio_list = expand(dio_days_list)
-        dpo_list = expand(dpo_days_list)
-        
-        labels = ["Initial"] + [f"M{i+1}" for i in range(num_periods)]
-    else:
-        num_periods = years
-        days_in_period = 365.0
-        rev_growth = revenue_growth_rates
-        cogs_pct = cogs_pct_rates
-        fixed_opex_list = fixed_opex_rates
-        capex_list = capex_rates
-        debt_repayment_list = annual_debt_repayment_list
-        dep_rate_period = depreciation_rate / 100.0
-        int_rate_period = interest_rate / 100.0
-        tax_r = tax_rate / 100.0
-        dso_list = dso_days_list
-        dio_list = dio_days_list
-        dpo_list = dpo_days_list
-        labels = ["Initial"] + [f"Year {i+1}" for i in range(num_periods)]
-
-    # --- Financial Logic Loop ---
-    revenue = [initial_revenue]
-    cogs = [0.0]
-    gross_profit = [0.0]
-    ebit = [0.0]
-    net_income = [0.0]
+    # --- 1. SETUP PERIODS (Always Monthly internally) ---
+    num_months = years * 12
+    days_in_period = 365.0 / 12.0
     
-    cash_closing = [initial_cash]
-    ar_closing = [0.0] # Will calc in loop
-    inventory_closing = [0.0]
-    ppe_closing = [initial_ppe]
-    ap_closing = [0.0]
-    debt_closing = [initial_debt]
-    retained_earnings = [0.0]
+    def expand_to_months(annual_list):
+        ml = []
+        for val in annual_list:
+            ml.extend([val] * 12)
+        return ml[:num_months]
 
-    # Initialize AR/Inv/AP based on initial revenue/cogs assumptions for Day 0
-    ar_closing[0] = (initial_revenue / 365.0) * dso_list[0]
-    # Estimate initial COGS for NWC starting point
-    init_cogs = initial_revenue * cogs_pct[0]
-    inventory_closing[0] = (init_cogs / 365.0) * dio_list[0]
-    ap_closing[0] = (init_cogs / 365.0) * dpo_list[0]
+    # Convert annual rates to monthly
+    rev_growth_monthly = [((1 + r)**(1/12) - 1) for r in expand_to_months(revenue_growth_rates)]
+    fixed_opex_monthly = [x / 12.0 for x in expand_to_months(fixed_opex_rates)]
+    capex_monthly = [x / 12.0 for x in expand_to_months(capex_rates)]
+    debt_repayment_monthly = [x / 12.0 for x in expand_to_months(annual_debt_repayment_list)]
+    
+    cogs_pct_m = expand_to_months(cogs_pct_rates)
+    dso_m = expand_to_months(dso_days_list)
+    dio_m = expand_to_months(dio_days_list)
+    dpo_m = expand_to_months(dpo_days_list)
+    
+    m_dep_rate = depreciation_rate / 12.0 
+    m_int_rate = interest_rate / 12.0
 
-    depreciation = [0.0]
-    interest_expense = [0.0]
-    taxes = [0.0]
-    ebt = [0.0]
+    # --- 2. INITIALIZATION ---
+    L = num_months + 1
+    revenue = [0.0] * L
+    cogs, gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(8)]
+    ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
+    nwc, change_nwc, cff, net_cash = [[0.0]*L for _ in range(4)]
 
-    for i in range(num_periods):
-        # IS
-        rev = revenue[-1] * (1 + rev_growth[i])
-        revenue.append(rev)
-        
-        c = rev * cogs_pct[i]
-        cogs.append(c)
-        gross_profit.append(rev - c)
-        
-        op_ex = fixed_opex_list[i]
-        dep = ppe_closing[-1] * dep_rate_period
-        depreciation.append(dep)
-        
-        this_ebit = rev - c - op_ex - dep
-        ebit.append(this_ebit)
-        
-        inte = debt_closing[-1] * int_rate_period
-        interest_expense.append(inte)
-        
-        this_ebt = this_ebit - inte
-        ebt.append(this_ebt)
-        
-        t = max(0, this_ebt * tax_r)
-        taxes.append(t)
-        
-        ni = this_ebt - t
-        net_income.append(ni)
-        
-        # BS
-        new_ppe = ppe_closing[-1] + capex_list[i] - dep
-        ppe_closing.append(new_ppe)
-        
-        new_debt = max(0, debt_closing[-1] - debt_repayment_list[i])
-        debt_closing.append(new_debt)
-        
-        ar = (rev / days_in_period) * dso_list[i]
-        ar_closing.append(ar)
-        
-        inv = (c / days_in_period) * dio_list[i]
-        inventory_closing.append(inv)
-        
-        ap = (c / days_in_period) * dpo_list[i]
-        ap_closing.append(ap)
-        
-        re = retained_earnings[-1] + ni
-        retained_earnings.append(re)
-        
-        # Cash Flow / Plug
-        assets_ex_cash = ar + inv + new_ppe
-        liabs_equity = ap + new_debt + re
-        cash_closing.append(liabs_equity - assets_ex_cash)
+    # Year 0
+    revenue[0] = initial_revenue 
+    ppe[0] = initial_ppe
+    debt[0] = initial_debt
+    cash[0] = initial_cash
+    
+    daily_f = 365.0 / 12.0
+    initial_cogs = initial_revenue * cogs_pct_m[0]
+    ar[0] = initial_revenue / daily_f * dso_m[0]
+    inv[0] = initial_cogs / daily_f * dio_m[0]
+    ap[0] = initial_cogs / daily_f * dpo_m[0]
+    re[0] = (cash[0] + ar[0] + inv[0] + ppe[0]) - (ap[0] + debt[0])
+    assets[0] = cash[0] + ar[0] + inv[0] + ppe[0]
+    liab_eq[0] = ap[0] + debt[0] + re[0]
 
-    # Calculate Cash Flow steps for the table
-    cash_flow_from_ops = [0.0]
-    for i in range(1, len(net_income)):
-        # Simple CFO: NI + Dep - Delta AR - Delta Inv + Delta AP
-        delta_ar = ar_closing[i] - ar_closing[i-1]
-        delta_inv = inventory_closing[i] - inventory_closing[i-1]
-        delta_ap = ap_closing[i] - ap_closing[i-1]
-        cfo = net_income[i] + depreciation[i] - delta_ar - delta_inv + delta_ap
-        cash_flow_from_ops.append(cfo)
+    # --- 3. MAIN MONTHLY LOOP ---
+    for i in range(1, L):
+        idx = i - 1
+        revenue[i] = revenue[i-1] * (1 + rev_growth_monthly[idx])
+        cogs[i] = revenue[i] * cogs_pct_m[idx]
+        gp[i] = revenue[i] - cogs[i]
+        opex[i] = fixed_opex_monthly[idx]
+        dep[i] = ppe[i-1] * m_dep_rate
+        ebit[i] = gp[i] - opex[i] - dep[i]
+        int_exp[i] = debt[i-1] * m_int_rate
+        ni[i] = (ebit[i] - int_exp[i]) - max(0, (ebit[i] - int_exp[i]) * tax_rate)
+        
+        ar[i] = (revenue[i] / daily_f) * dso_m[idx]
+        inv[i] = (cogs[i] / daily_f) * dio_m[idx]
+        ap[i] = (cogs[i] / daily_f) * dpo_m[idx]
+        change_nwc[i] = (ar[i]+inv[i]-ap[i]) - (ar[i-1]+inv[i-1]-ap[i-1])
+        ppe[i] = ppe[i-1] + capex_monthly[idx] - dep[i]
+        debt_repaid = min(debt_repayment_monthly[idx], debt[i-1])
+        debt[i] = debt[i-1] - debt_repaid
+        re[i] = re[i-1] + ni[i]
+        
+        cfo = ni[i] + dep[i] - change_nwc[i]
+        cfi = -capex_monthly[idx]
+        cff[i] = -debt_repaid
+        net_cash[i] = cfo + cfi + cff[i]
+        cash[i] = cash[i-1] + net_cash[i]
+        assets[i] = cash[i] + ar[i] + inv[i] + ppe[i]
+        liab_eq[i] = ap[i] + debt[i] + re[i]
+
+    # --- 4. HYBRID AGGREGATION ---
+    labels = ["Start"]
+    indices = [0] # List of month indices to keep
+    
+    # 1. Add monthly Detail
+    for m in range(1, monthly_detail + 1):
+        labels.append(f"M{m}")
+        indices.append(m)
+    
+    # 2. Add Annual aggregation for remaining time
+    start_year = (monthly_detail // 12) + 1
+    for y in range(start_year, years + 1):
+        labels.append(f"Year {y}")
+        indices.append(y * 12)
+
+    def get_display_val(arr, is_is=True):
+        # arr is the monthly list [0...36]
+        res = []
+        # Index 0 is special (Start/Year 0)
+        res_start = arr[0]
+        
+        # Monthly slices
+        for m in range(1, monthly_detail + 1):
+            res.append(arr[m])
+            
+        # Annual slices
+        for y in range(start_year, years + 1):
+            m_end = y * 12
+            m_start = (y-1) * 12 + 1
+            if is_is:
+                # Sum for flow items (Income Statement)
+                res.append(sum(arr[m_start : m_end+1]))
+            else:
+                # Last month for balance sheet items
+                res.append(arr[m_end])
+        return [res_start] + res
+
+    # Package for frontend
+    # Note: Income Statement/Cash flow don't show the "Start" column
+    d_rev = get_display_val(revenue)[1:]
+    d_ni = get_display_val(ni)[1:]
+    d_cash = get_display_val(cash, False)
 
     return {
-        "Years": labels,
-        "Revenue": revenue,
-        "Net Income": net_income,
-        "Closing Cash": cash_closing,
-        "excel_is": {
-            "Revenue": revenue, "COGS": cogs, "EBIT": ebit, "Net Income": net_income
-        },
-        "excel_bs": {
-            "Cash": cash_closing, "AR": ar_closing, "Inventory": inventory_closing, 
-            "PP&E": ppe_closing, "AP": ap_closing, "Debt": debt_closing, "RE": retained_earnings
-        },
-        "excel_cfs": {
-            "Cash From Operations": cash_flow_from_ops,
-            "CapEx": [0] + [-x for x in capex_list],
-            "Debt Repayment": [0] + [-x for x in debt_repayment_list],
-            "Net Change in Cash": [0] + [cash_closing[i] - cash_closing[i-1] for i in range(1, len(cash_closing))]
+        "Display_Labels": labels,
+        "display_data": {
+            "Revenue": d_rev,
+            "COGS": get_display_val(cogs)[1:],
+            "Gross Profit": get_display_val(gp)[1:],
+            "Fixed Opex": get_display_val(opex)[1:],
+            "Depreciation": get_display_val(dep)[1:],
+            "EBIT": get_display_val(ebit)[1:],
+            "Interest": get_display_val(int_exp)[1:],
+            "Taxes": [ (get_display_val(ebit)[1:][i] - get_display_val(int_exp)[1:][i])*tax_rate for i in range(len(d_rev))],
+            "Net Income": d_ni,
+            "Cash": d_cash,
+            "AR": get_display_val(ar, False),
+            "Inventory": get_display_val(inv, False),
+            "PPE": get_display_val(ppe, False),
+            "Total Assets": get_display_val(assets, False),
+            "AP": get_display_val(ap, False),
+            "Debt": get_display_val(debt, False),
+            "RE": get_display_val(re, False),
+            "Total LiabEq": get_display_val(liab_eq, False),
+            "CF_NI": d_ni,
+            "CF_Dep": get_display_val(dep)[1:],
+            "CF_NWC": [-x for x in get_display_val(change_nwc)[1:]],
+            "CFO": [ (d_ni[i] + get_display_val(dep)[1:][i] - get_display_val(change_nwc)[1:][i]) for i in range(len(d_ni))],
+            "CFI": [-x for x in get_display_val(capex_monthly)], # simplification for aggregation
+            "CFF": get_display_val(cff)[1:],
+            "Net Cash Change": get_display_val(net_cash)[1:]
         }
     }
