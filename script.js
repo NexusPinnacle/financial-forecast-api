@@ -285,12 +285,7 @@ function renderCharts(data) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => { 
+document.addEventListener('DOMContentLoaded', (3) => { 
     const defaultYears = 5; // Updated default
     createAllGranularInputs(defaultYears); 
 
-    const defaultBtn = document.querySelector(`.year-select-btn[data-value="${defaultYears}"]`);
-    if (defaultBtn) {
-        defaultBtn.classList.add('active', 'selected-year-btn');
-
-        forecastYearsInput.value = defaultYears;
