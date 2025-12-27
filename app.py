@@ -9,7 +9,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return render_template('index.html')    
+    return render_template('index.html') 
 
 def get_inputs_from_request(data):
     def get_list_float(key):
@@ -17,8 +17,11 @@ def get_inputs_from_request(data):
         if isinstance(val, str): val = [val]
         return [float(x) for x in val if x is not None]
 
+    # NEW: Capture the revenue_streams list from the request
+    revenue_streams = data.get('revenue_streams', [])
+
     return {
-        "initial_revenue": float(data.get('initial_revenue') or 0.0),
+        "revenue_streams": revenue_streams, # Updated to handle the matrix data
         "tax_rate": float(data.get('tax_rate') or 0.0),
         "initial_ppe": float(data.get('initial_ppe') or 0.0),
         "depreciation_rate": float(data.get('depreciation_rate') or 0.0),
@@ -27,7 +30,7 @@ def get_inputs_from_request(data):
         "interest_rate": float(data.get('interest_rate') or 0.0),
         "years": int(data.get('years', 5)),
         "monthly_detail": int(data.get('monthly_detail', 0)),
-        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
+        # Initial revenue and growth lists are removed as they are now in revenue_streams
         "cogs_pct_rates": get_list_float('cogs_pct_rates'),
         "fixed_opex_rates": get_list_float('fixed_opex_rates'),
         "capex_rates": get_list_float('capex_rates'),
@@ -43,6 +46,8 @@ def forecast():
         inputs = get_inputs_from_request(request.json)
         return jsonify(generate_forecast(**inputs))
     except Exception as e:
+        import traceback
+        print(traceback.format_exc()) # Log error to console for debugging
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/export', methods=['POST'])
@@ -53,19 +58,25 @@ def export_to_excel():
         output = BytesIO()
         writer = pd.ExcelWriter(output, engine='xlsxwriter')
         
+        d = results['display_data']
         labels_all = results['Display_Labels']
         labels_is = labels_all[1:]
         
-        # Prepare DataFrames based on display_data
-        d = results['display_data']
+        # Prepare DataFrames
         is_map = {k: d[k] for k in ["Revenue", "COGS", "Gross Profit", "Fixed Opex", "Depreciation", "EBIT", "Interest", "Taxes", "Net Income"]}
         bs_map = {k: d[k] for k in ["Cash", "AR", "Inventory", "PPE", "Total Assets", "AP", "Debt", "RE", "Total LiabEq"]}
+        
+        # Helper to ensure CFI matches column length
+        cfi_data = d["CFI"]
+        if len(cfi_data) != len(labels_is):
+            cfi_data = cfi_data[1:] if len(cfi_data) > len(labels_is) else cfi_data
+
         cf_map = { 
             "Net Income": d["CF_NI"], 
             "Depreciation": d["CF_Dep"], 
             "NWC Change": d["CF_NWC"], 
             "CFO": d["CFO"], 
-            "CFI": d["CFI"] if len(d["CFI"]) == len(labels_is) else d["CFI"][1:], # Alignment Fix
+            "CFI": cfi_data, 
             "CFF": d["CFF"], 
             "Net Change": d["Net Cash Change"]
         }
