@@ -141,4 +141,133 @@ form.onsubmit = async (e) => {
     renderResults(data);
 };
 
-// (Include your existing renderResults and renderCharts functions here)
+function renderResults(data) {
+    const resultsContainer = document.getElementById('results-container');
+    const currency = document.getElementById('currency_symbol').value;
+    resultsContainer.style.display = 'block';
+
+    const labels = data.Display_Labels;
+    const isLabels = labels.slice(1); // Income Statement/Cash Flow start from Period 1
+    const d = data.display_data;
+
+    // Helper to format numbers
+    const fmt = (val) => {
+        if (val === undefined || val === null) return '0.00';
+        return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    // Helper to build table rows
+    function buildTable(tableId, labelArray, rows) {
+        const table = document.getElementById(tableId);
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        
+        // 1. Headers
+        thead.innerHTML = `<tr><th>Metric</th>${labelArray.map(l => `<th>${l}</th>`).join('')}</tr>`;
+        
+        // 2. Body
+        tbody.innerHTML = '';
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            if (row.isTotal) tr.classList.add('heavy-total-row');
+            
+            let cells = `<td>${row.label}</td>`;
+            row.data.forEach(val => {
+                const colorClass = val < 0 ? 'style="color: #dc3545;"' : '';
+                cells += `<td class="data-cell" ${colorClass}>${currency}${fmt(val)}</td>`;
+            });
+            tr.innerHTML = cells;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- 1. INCOME STATEMENT ---
+    buildTable('incomeStatementTable', isLabels, [
+        { label: 'Total Revenue', data: d['Revenue'] },
+        { label: 'COGS', data: d['COGS'] },
+        { label: 'Gross Profit', data: d['Gross Profit'], isTotal: true },
+        { label: 'Fixed Operating Expenses', data: d['Fixed Opex'] },
+        { label: 'Depreciation', data: d['Depreciation'] },
+        { label: 'EBIT', data: d['EBIT'], isTotal: true },
+        { label: 'Interest Expense', data: d['Interest'] },
+        { label: 'Taxes', data: d['Taxes'] },
+        { label: 'Net Income', data: d['Net Income'], isTotal: true }
+    ]);
+
+    // --- 2. BALANCE SHEET ---
+    buildTable('balanceSheetTable', labels, [
+        { label: 'Cash & Equivalents', data: d['Cash'] },
+        { label: 'Accounts Receivable', data: d['AR'] },
+        { label: 'Inventory', data: d['Inventory'] },
+        { label: 'Net PPE', data: d['PPE'] },
+        { label: 'Total Assets', data: d['Total Assets'], isTotal: true },
+        { label: 'Accounts Payable', data: d['AP'] },
+        { label: 'Long Term Debt', data: d['Debt'] },
+        { label: 'Retained Earnings', data: d['RE'] },
+        { label: 'Total Liabilities & Equity', data: d['Total LiabEq'], isTotal: true }
+    ]);
+
+    // --- 3. CASH FLOW STATEMENT ---
+    buildTable('cashFlowTable', isLabels, [
+        { label: 'Net Income', data: d['CF_NI'] },
+        { label: 'Depreciation (Add-back)', data: d['CF_Dep'] },
+        { label: 'Change in Working Capital', data: d['CF_NWC'] },
+        { label: 'Cash Flow from Operations', data: d['CFO'], isTotal: true },
+        { label: 'Cash Flow from Investing (CapEx)', data: d['CFI'] },
+        { label: 'Cash Flow from Financing', data: d['CFF'] },
+        { label: 'Net Change in Cash', data: d['Net Cash Change'], isTotal: true }
+    ]);
+
+    // Trigger Charts
+    renderCharts(data);
+
+    // Auto-scroll to results
+    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderCharts(data) {
+    const ctxRev = document.getElementById('revenueKpiChart').getContext('2d');
+    const ctxCash = document.getElementById('cashDebtChart').getContext('2d');
+
+    // Destroy existing charts if they exist to prevent memory leaks/overlap
+    if (window.revChartInst) window.revChartInst.destroy();
+    if (window.cashChartInst) window.cashChartInst.destroy();
+
+    const labels = data.Display_Labels.slice(1);
+
+    window.revChartInst = new Chart(ctxRev, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Annual Revenue',
+                data: data.display_data['Revenue'],
+                borderColor: '#3b84f5',
+                backgroundColor: 'rgba(59, 132, 245, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Revenue Growth Trajectory' } } }
+    });
+
+    window.cashChartInst = new Chart(ctxCash, {
+        type: 'bar',
+        data: {
+            labels: data.Display_Labels,
+            datasets: [
+                {
+                    label: 'Cash Position',
+                    data: data.display_data['Cash'],
+                    backgroundColor: '#28a745'
+                },
+                {
+                    label: 'Debt Level',
+                    data: data.display_data['Debt'],
+                    backgroundColor: '#dc3545'
+                }
+            ]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: 'Liquidity vs. Leverage' } } }
+    });
+}
