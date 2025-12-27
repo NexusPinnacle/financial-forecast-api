@@ -15,7 +15,7 @@ body {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-h1, h2 {
+h1, h2, h3 {
     color: #3b84f5; 
     border-bottom: 2px solid #eee;
     padding-bottom: 10px;
@@ -88,7 +88,69 @@ h1, h2 {
     min-width: 45%;
 }
 
-/* Input Group */
+/* --- Revenue Builder Container --- */
+.revenue-builder-container {
+    background: #fdfdfd;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.revenue-stream-card {
+    background: #ffffff;
+    border: 1px solid #ccd0d4;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.remove-stream-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+}
+
+.matrix-wrapper {
+    overflow-x: auto;
+    margin-top: 10px;
+    border: 1px solid #eee;
+}
+
+.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8em;
+}
+
+.matrix-table th {
+    background: #f7f7f7;
+    padding: 4px;
+    border: 1px solid #ddd;
+}
+
+.matrix-input {
+    width: 50px;
+    padding: 4px;
+    border: 1px solid #eee;
+    text-align: right;
+}
+
+.matrix-input:focus {
+    outline: 2px solid #3b84f5;
+    border-color: transparent;
+}
+
+/* --- Standard Input Group --- */
 .input-group {
     display: flex;
     justify-content: space-between;
@@ -96,16 +158,14 @@ h1, h2 {
     align-items: center;
 }
 label { flex-basis: 75%; font-weight: bold; }
-input[type="number"], select {
-    flex-basis: 25%;
+input[type="number"], input[type="text"], input[type="month"], select {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    text-align: right;
 }
 
-/* Buttons */
-button#calculateBtn, button#exportBtn {
+/* --- Buttons --- */
+button#calculateBtn, button#exportBtn, .action-btn {
     background-color: #003b5c; 
     color: white;
     padding: 12px 20px;
@@ -115,12 +175,13 @@ button#calculateBtn, button#exportBtn {
     font-size: 16px;
     transition: background-color 0.3s;
     width: 100%;
-    margin-top: 20px;
+    margin-top: 10px;
 }
 button#exportBtn { background-color: #1e6f5c; }
+.action-btn { background-color: #28a745; width: auto; margin-bottom: 10px; }
 button:hover { opacity: 0.9; }
 
-/* Granular Sections */
+/* --- Granular Sections --- */
 .granular-section { margin-bottom: 10px; }
 .collapsible-header {
     cursor: pointer;
@@ -142,7 +203,7 @@ button:hover { opacity: 0.9; }
     border-top: none;
 }
 .collapsible-content.expanded-content {
-    max-height: 500px; 
+    max-height: 800px; 
     padding: 5px 10px 15px 10px;
 }
 .granular-input-row {
@@ -192,10 +253,6 @@ button:hover { opacity: 0.9; }
     display: none;
     animation: fadeEffect 0.5s;
 }
-@keyframes fadeEffect {
-    from {opacity: 0;}
-    to {opacity: 1;}
-}
 
 /* Tables */
 .table-responsive { overflow-x: auto; }
@@ -206,10 +263,17 @@ table {
     font-size: 0.9em;
 }
 th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-th:first-child, td:first-child { text-align: left; background-color: #f7f7f7; font-weight: bold; min-width: 200px; position: sticky; left: 0;}
+th:first-child, td:first-child { 
+    text-align: left; 
+    background-color: #f7f7f7; 
+    font-weight: bold; 
+    min-width: 200px; 
+    position: sticky; 
+    left: 0;
+    z-index: 5;
+}
 thead th { background-color: #f0f0f0; color: #333; }
 .heavy-total-row { border-top: 2px solid #000; font-weight: bold; }
 .data-cell { font-family: 'Courier New', monospace; }
 
 .error-message { color: #dc3545; font-weight: bold; margin-top: 15px; }
-.tooltip-trigger { cursor: help; color: #3b84f5; margin-left: 5px; }
