@@ -1,279 +1,45 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f7f6;
-    color: #333;
-    margin: 0;
-    padding: 20px;
-}
+body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+.container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+h1, h2, h3 { color: #3b84f5; border-bottom: 2px solid #eee; padding-bottom: 10px; }
 
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
-    background: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+.settings-row { display: flex; gap: 40px; margin-bottom: 25px; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 6px; }
+.year-select-btn { padding: 8px 15px; background: #fff; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; }
+.year-select-btn.active { background: #3b84f5; color: white; border-color: #3b84f5; font-weight: bold; }
 
-h1, h2, h3 {
-    color: #3b84f5; 
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-}
+.input-layout { display: flex; gap: 30px; }
+.left-pane, .right-pane { flex: 1; }
 
-/* --- Settings Row (Mode & Duration) --- */
-.settings-row {
-    display: flex;
-    justify-content: flex-start;
-    gap: 40px;
-    margin-bottom: 25px;
-    align-items: center;
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 6px;
-}
+.revenue-builder-container { background: #fdfdfd; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; }
+.revenue-stream-card { background: white; border: 1px solid #ccd0d4; padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.remove-stream-btn { position: absolute; right: 8px; top: 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; width: 24px; height: 24px; }
 
-.mode-group, .duration-group {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
+.matrix-wrapper { overflow-x: auto; margin-top: 10px; border: 1px solid #eee; }
+.matrix-table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+.matrix-table th, .matrix-table td { border: 1px solid #ddd; padding: 4px; text-align: right; }
+.matrix-table th { background: #f7f7f7; }
+.matrix-input { width: 55px; border: 1px solid #eee; text-align: right; padding: 3px; }
 
-.mode-group label, .duration-group label {
-    font-weight: bold;
-    margin: 0;
-}
+.input-group { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+.input-group label { font-weight: bold; }
+input[type="number"], input[type="text"], select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
 
-.toggle-buttons, .duration-buttons {
-    display: flex;
-    gap: 5px;
-}
+.collapsible-header { cursor: pointer; background: #f7f7f7; padding: 10px; border: 1px solid #ddd; display: flex; justify-content: space-between; margin-top: 5px; }
+.collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s; padding: 0 10px; border: 1px solid #ddd; border-top: none; }
+.collapsible-content.expanded-content { max-height: 1000px; padding: 10px; }
 
-.mode-btn, .year-select-btn, .month-select-btn {
-    padding: 8px 15px;
-    background-color: #fff;
-    color: #333;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
+.granular-input-row { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 10px; }
+.granular-year-input { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+.granular-year-input input { width: 50px; text-align: center; }
 
-.mode-btn:hover, .year-select-btn:hover, .month-select-btn:hover {
-    background-color: #e0e0e0;
-}
+button#calculateBtn { background: #003b5c; color: white; width: 100%; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+button#exportBtn { background: #1e6f5c; color: white; width: 100%; padding: 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+.action-btn { background: #28a745; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; }
 
-.selected-year-btn, .mode-btn.active, .month-select-btn.active {
-    background-color: #3b84f5;
-    color: white;
-    font-weight: bold;
-    border-color: #3b84f5;
-}
+.tab-link { padding: 10px 20px; cursor: pointer; background: #f1f1f1; border: none; border-radius: 5px 5px 0 0; }
+.tab-link.active { background: #3b84f5; color: white; }
+.tab-content { display: none; padding: 20px; border: 1px solid #ccc; border-top: none; }
 
-/* --- Input Layout --- */
-.input-layout {
-    display: flex;
-    gap: 40px;
-    margin-top: 20px;
-}
-.left-pane {
-    flex-basis: 50%;
-    min-width: 45%;
-    padding-right: 20px; 
-    border-right: 1px solid #eee;
-}
-.right-pane {
-    flex-basis: 50%;
-    min-width: 45%;
-}
-
-/* --- Revenue Builder Container --- */
-.revenue-builder-container {
-    background: #fdfdfd;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    margin-bottom: 30px;
-}
-
-.revenue-stream-card {
-    background: #ffffff;
-    border: 1px solid #ccd0d4;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    position: relative;
-}
-
-.remove-stream-btn {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    width: 25px;
-    height: 25px;
-    cursor: pointer;
-}
-
-.matrix-wrapper {
-    overflow-x: auto;
-    margin-top: 10px;
-    border: 1px solid #eee;
-}
-
-.matrix-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8em;
-}
-
-.matrix-table th {
-    background: #f7f7f7;
-    padding: 4px;
-    border: 1px solid #ddd;
-}
-
-.matrix-input {
-    width: 50px;
-    padding: 4px;
-    border: 1px solid #eee;
-    text-align: right;
-}
-
-.matrix-input:focus {
-    outline: 2px solid #3b84f5;
-    border-color: transparent;
-}
-
-/* --- Standard Input Group --- */
-.input-group {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    align-items: center;
-}
-label { flex-basis: 75%; font-weight: bold; }
-input[type="number"], input[type="text"], input[type="month"], select {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-/* --- Buttons --- */
-button#calculateBtn, button#exportBtn, .action-btn {
-    background-color: #003b5c; 
-    color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-    width: 100%;
-    margin-top: 10px;
-}
-button#exportBtn { background-color: #1e6f5c; }
-.action-btn { background-color: #28a745; width: auto; margin-bottom: 10px; }
-button:hover { opacity: 0.9; }
-
-/* --- Granular Sections --- */
-.granular-section { margin-bottom: 10px; }
-.collapsible-header {
-    cursor: pointer;
-    background-color: #f7f7f7;
-    padding: 10px;
-    border: 1px solid #ddd;
-    margin: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-}
-.collapsible-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-in-out;
-    padding: 0 10px;
-    border: 1px solid #ddd;
-    border-top: none;
-}
-.collapsible-content.expanded-content {
-    max-height: 800px; 
-    padding: 5px 10px 15px 10px;
-}
-.granular-input-row {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 10px 0;
-}
-.granular-year-input {
-    min-width: 80px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-}
-.granular-year-input input { width: 65px; text-align: center; }
-.granular-row-label {
-    font-weight: bold;
-    margin: 5px 0;
-    padding-left: 5px;
-    border-left: 4px solid #3b84f5;
-}
-
-/* --- TABS Styling --- */
-.tabs-header {
-    overflow: hidden;
-    border-bottom: 1px solid #ccc;
-    margin-bottom: 20px;
-}
-.tab-link {
-    background-color: #f1f1f1;
-    float: left;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 14px 16px;
-    transition: 0.3s;
-    font-size: 16px;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    margin-right: 2px;
-}
-.tab-link:hover { background-color: #ddd; }
-.tab-link.active { background-color: #3b84f5; color: white; }
-.tab-content {
-    display: none;
-    animation: fadeEffect 0.5s;
-}
-
-/* Tables */
-.table-responsive { overflow-x: auto; }
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 0.9em;
-}
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-th:first-child, td:first-child { 
-    text-align: left; 
-    background-color: #f7f7f7; 
-    font-weight: bold; 
-    min-width: 200px; 
-    position: sticky; 
-    left: 0;
-    z-index: 5;
-}
-thead th { background-color: #f0f0f0; color: #333; }
-.heavy-total-row { border-top: 2px solid #000; font-weight: bold; }
-.data-cell { font-family: 'Courier New', monospace; }
-
-.error-message { color: #dc3545; font-weight: bold; margin-top: 15px; }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: #f7f7f7; z-index: 2; }
+.heavy-total-row { font-weight: bold; border-top: 2px solid #333; }
