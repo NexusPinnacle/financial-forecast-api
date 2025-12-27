@@ -34,12 +34,74 @@
         </div>
         
         <form id="forecastForm">
-            <input type="hidden" id="forecast_years" value="3"> 
+            <input type="hidden" id="forecast_years" value="5"> 
             <input type="hidden" id="monthly_detail" value="0">
 
             <h2>Baseline & Assumptions</h2>
             
             <div class="input-layout">
+                <div class="revenue-builder-container" style="margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px;">
+    <h3>Revenue Streams Builder</h3>
+    <p class="help-text">Add different revenue types (Recurring, Units, etc.) to build your top-line forecast.</p>
+    
+    <div id="revenue-streams-list">
+        </div>
+
+    <button type="button" id="add-revenue-stream-btn" class="action-btn" style="background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;">
+        + Add New Revenue Stream
+    </button>
+
+    <div class="revenue-total-summary" style="margin-top: 15px; font-weight: bold; font-size: 1.1em; color: #3b84f5;">
+        Total Built Revenue (Sum): <span id="total-revenue-sum">0.00</span>
+    </div>
+</div>
+
+<template id="revenue-stream-template">
+    <div class="revenue-stream-card" style="background: #fdfdfd; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; position: relative;">
+        <button type="button" class="remove-stream-btn" style="position: absolute; right: 10px; top: 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">&times;</button>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px;">
+            <div>
+                <label>Name:</label>
+                <input type="text" class="rev-name" placeholder="e.g. SaaS Subscriptions" style="width: 100%;">
+            </div>
+            <div>
+                <label>Type:</label>
+                <select class="rev-type" style="width: 100%;">
+                    <option value="unit">Unit Sales</option>
+                    <option value="recurring">Recurring</option>
+                    <option value="hours">Billable Hours</option>
+                    <option value="revenue">Revenue Only</option>
+                </select>
+            </div>
+            <div>
+                <label>Behavior:</label>
+                <select class="rev-description" style="width: 100%;">
+                    <option value="constant">Constant</option>
+                    <option value="variable">Variable</option>
+                </select>
+            </div>
+            <div>
+                <label>Start (MM-YY):</label>
+                <input type="month" class="rev-start" value="2025-01" style="width: 100%;">
+            </div>
+            <div>
+                <label>Annual Indexation (%):</label>
+                <input type="number" class="rev-index" value="0" step="0.1" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="matrix-wrapper" style="overflow-x: auto; background: #fff; padding: 10px; border-radius: 4px; border: 1px inset #eee;">
+            <p style="font-size: 0.85em; margin-bottom: 5px; color: #666;">Monthly Data Matrix (Months in Columns, Years in Rows):</p>
+            <table class="matrix-table" style="width: 100%; border-collapse: collapse; font-size: 0.8em;">
+                <thead>
+                    <tr id="matrix-header"></tr>
+                </thead>
+                <tbody class="matrix-body"></tbody>
+            </table>
+        </div>
+    </div>
+</template>
                 <div class="left-pane">
                     <h3>Core Assumptions (Annual Rates)</h3>
                     
@@ -52,16 +114,7 @@
                             <option value="¥">JPY (¥)</option>
                         </select>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="initial_revenue">Initial Revenue (Year 0):</label>
-                        <input type="number" id="initial_revenue" value="1000" step="0.01" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="default_revenue_growth">Revenue Growth (Annual %):</label>
-                        <input type="number" id="default_revenue_growth" value="5" step="0.1" required>
-                    </div>
+                
 
                     <div class="input-group">
                         <label for="default_cogs_pct">COGS as % of Revenue:</label>
@@ -128,13 +181,6 @@
                 <div class="right-pane">
                     <h2>Granular Assumptions (By Year)</h2>
                     <p>Enter assumptions per year. The model will extrapolate monthly values based on these annual figures.</p>
-                    
-                    <div class="granular-section">
-                        <h4 class="collapsible-header collapsed" data-target="revenue-growth-container">
-                            Revenue Growth (%) <span class="toggle-icon">▼</span>
-                        </h4>
-                        <div id="revenue-growth-container" class="collapsible-content"></div>
-                    </div>
 
                     <div class="granular-section">
                         <h4 class="collapsible-header collapsed" data-target="cogs-pct-container">
