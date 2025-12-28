@@ -278,7 +278,7 @@ thead th { background-color: #f0f0f0; color: #333; }
     margin-top: 5px;
 }
 
-/* The Matrix Grid */
+/* --- Updated Revenue Builder Matrix UI --- */
 .revenue-streams-list {
     margin-top: 20px;
 }
@@ -286,51 +286,111 @@ thead th { background-color: #f0f0f0; color: #333; }
 .stream-card {
     background: #fff;
     border: 1px solid #ddd;
+    border-left: 5px solid #3b84f5; /* Visual indicator for a "stream" */
     border-radius: 6px;
-    margin-bottom: 15px;
-    padding: 15px;
+    margin-bottom: 25px;
+    padding: 0; /* Padding moved to header/grid for better alignment */
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    overflow: hidden;
 }
 
 .stream-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
+    padding: 12px 15px;
+    background: #fcfcfc;
     border-bottom: 1px solid #eee;
 }
 
-.stream-header h4 { margin: 0; color: #333; }
-.stream-meta { font-size: 0.9em; color: #666; margin-right: 15px; }
+.stream-header h4 { margin: 0; color: #333; font-size: 1.1em; }
 
-.matrix-scroll-wrapper {
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-bottom: 10px;
+/* The Container for the Years */
+.matrix-grid-container {
     display: flex;
-    gap: 5px;
+    flex-direction: column;
+    background-color: #eee; /* This acts as the border between rows */
+    gap: 1px; 
 }
 
-.matrix-cell {
-    display: inline-block;
-    width: 80px;
-    text-align: center;
-}
-
-.matrix-cell label {
-    display: block;
+/* Header row for Months M1 - M12 */
+.matrix-header-row {
+    display: grid;
+    /* Label(80px) | 12 equal months | Total(110px) */
+    grid-template-columns: 80px repeat(12, 1fr) 110px;
+    background: #3b84f5;
+    color: white;
     font-size: 0.75em;
-    color: #888;
-    margin-bottom: 2px;
     text-align: center;
+    font-weight: bold;
+}
+.matrix-header-row div { padding: 6px 0; }
+
+/* Individual Year Row */
+.matrix-year-row {
+    display: grid;
+    grid-template-columns: 80px repeat(12, 1fr) 110px; 
+    background-color: #fff;
+    align-items: center;
+}
+
+.year-label {
+    font-weight: bold;
+    font-size: 0.8em;
+    color: #555;
+    padding-left: 12px;
+    background: #f9f9f9;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #eee;
+}
+
+/* Input cells */
+.matrix-cell {
+    border-right: 1px solid #eee;
+    padding: 0;
+    height: 100%;
 }
 
 .matrix-cell input {
-    width: 70px;
-    padding: 4px;
-    font-size: 0.85em;
+    width: 100%;
+    height: 100%;
+    border: none;
     text-align: right;
-    border: 1px solid #eee;
+    font-size: 0.85em;
+    padding: 8px 4px;
+    box-sizing: border-box;
+    background: transparent;
 }
-.matrix-cell input:focus { border-color: #3b84f5; outline: none; }
+
+.matrix-cell input:focus {
+    background-color: #eef5ff;
+    outline: 2px solid #3b84f5;
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* Annual Total Column */
+.year-total-box {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: #2a6dd1;
+    text-align: right;
+    padding-right: 12px;
+    background: #f0f7ff;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Remove Arrows from Number Inputs for a cleaner look */
+.matrix-cell input::-webkit-outer-spin-button,
+.matrix-cell input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.matrix-cell input[type=number] {
+    -moz-appearance: textfield;
+}
