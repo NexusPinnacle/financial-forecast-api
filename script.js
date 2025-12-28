@@ -10,8 +10,8 @@ const monthlyDetailSelect = document.getElementById('monthly_detail_select');
 const forecastYearsInput = document.getElementById('forecast_years');
 const monthlyDetailInput = document.getElementById('monthly_detail');
 
+// Granular Containers
 const granularContainers = {
-    revenue_growth: document.getElementById('revenue-growth-container'),
     cogs_pct: document.getElementById('cogs-pct-container'),
     fixed_opex: document.getElementById('fixed-opex-container'),
     capex: document.getElementById('capex-container'),
@@ -23,6 +23,99 @@ const granularContainers = {
 
 let revenueChart = null;
 let cashDebtChart = null;
+let revenueStreams = []; // Store stream metadata
+
+// --- REVENUE BUILDER LOGIC ---
+
+document.getElementById('addStreamBtn').addEventListener('click', () => {
+    const name = document.getElementById('new_stream_name').value || 'Stream ' + (revenueStreams.length + 1);
+    const type = document.getElementById('new_stream_type').value;
+    const price = parseFloat(document.getElementById('new_stream_price').value) || 0;
+    const qty = parseFloat(document.getElementById('new_stream_qty').value) || 0;
+    const growth = parseFloat(document.getElementById('new_stream_growth').value) || 0;
+
+    const id = Date.now();
+    const years = parseInt(forecastYearsInput.value);
+    const months = years * 12;
+
+    const streamObj = { id, name, type, price, qty, growth, months };
+    revenueStreams.push(streamObj);
+    renderStream(streamObj);
+    updateTotalRevenuePreview();
+});
+
+function renderStream(stream) {
+    const container = document.getElementById('revenue-streams-list');
+    const div = document.createElement('div');
+    div.className = 'stream-card';
+    div.id = `stream-${stream.id}`;
+
+    // Calculate initial values based on drivers
+    // Logic: Base Revenue = Price * Qty. Grows annually by growth %.
+    const monthlyVals = [];
+    const monthlyGrowth = Math.pow((1 + stream.growth/100), 1/12) - 1;
+    let currentMonthlyRev = (stream.price * stream.qty) / 12; // annualized to monthly
+    
+    // If unit sales/service, we often think in "Units per month * Price". 
+    // If input was annual Qty, divide by 12.
+    // Let's assume Inputs are Annualized Run Rates for simplicity in this UI
+    
+    for(let i=0; i < stream.months; i++) {
+        // Apply growth every month (compounded) or step up annually? 
+        // Let's do step up annually for cleaner "Grid" look, or monthly compound.
+        // Doing monthly compound for smoothness.
+        if (i > 0) currentMonthlyRev = currentMonthlyRev * (1 + monthlyGrowth);
+        monthlyVals.push(currentMonthlyRev);
+    }
+
+    // Header
+    let html = `
+        <div class="stream-header">
+            <h4>${stream.name} <span style="font-weight:normal; font-size:0.8em">(${stream.type})</span></h4>
+            <div>
+                <button type="button" class="remove-stream-btn" onclick="removeStream(${stream.id})">Remove</button>
+            </div>
+        </div>
+        <div class="matrix-scroll-wrapper">
+    `;
+
+    // Matrix Cells (Limit to 60 months for UI performance, or match horizon)
+    for(let i=0; i < monthlyVals.length; i++) {
+        const val = monthlyVals[i].toFixed(2);
+        html += `
+            <div class="matrix-cell">
+                <label>M${i+1}</label>
+                <input type="number" class="stream-val-input" data-stream="${stream.id}" value="${val}" onchange="updateTotalRevenuePreview()">
+            </div>
+        `;
+    }
+    html += `</div>`;
+    div.innerHTML = html;
+    container.appendChild(div);
+}
+
+window.removeStream = function(id) {
+    revenueStreams = revenueStreams.filter(s => s.id !== id);
+    document.getElementById(`stream-${id}`).remove();
+    updateTotalRevenuePreview();
+}
+
+function updateTotalRevenuePreview() {
+    // Sum the first 12 inputs of all streams
+    let totalYr1 = 0;
+    const cards = document.querySelectorAll('.stream-card');
+    
+    cards.forEach(card => {
+        const inputs = card.querySelectorAll('input.stream-val-input');
+        for(let i=0; i<12 && i<inputs.length; i++) {
+            totalYr1 += parseFloat(inputs[i].value) || 0;
+        }
+    });
+    
+    document.getElementById('total-revenue-preview').textContent = totalYr1.toLocaleString(undefined, {minimumFractionDigits: 2});
+}
+
+// --- CORE TABS & UTILS ---
 
 function openTab(evt, tabName) {
     const tabContents = document.getElementsByClassName("tab-content");
@@ -60,7 +153,7 @@ function createVerticalInputs(container, idPrefix, labelBase, count, defaultValu
 }
 
 function createAllGranularInputs(numYears) {
-    createVerticalInputs(granularContainers.revenue_growth, 'revenue_growth', 'Revenue Growth', numYears, 'default_revenue_growth', '0.1', '(%)');
+    // Note: removed revenue_growth inputs as they are now handled by streams or fallback
     createVerticalInputs(granularContainers.cogs_pct, 'cogs_pct', 'COGS %', numYears, 'default_cogs_pct', '0.1', '(%)');
     createVerticalInputs(granularContainers.fixed_opex, 'fixed_opex', 'Fixed Opex', numYears, 'default_fixed_opex', '0.01', '');
     createVerticalInputs(granularContainers.capex, 'capex', 'CapEx', numYears, 'default_capex', '0.01', '');
@@ -72,20 +165,19 @@ function createAllGranularInputs(numYears) {
 
 annualButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-        // 1. Remove BOTH potential active classes from all buttons
         annualButtons.forEach(b => {
             b.classList.remove('active');
             b.classList.remove('selected-year-btn');
         });
-
-        // 2. Add BOTH classes to the clicked button
         btn.classList.add('active');
         btn.classList.add('selected-year-btn');
-
-        // 3. Update the values
         const val = parseInt(btn.getAttribute('data-value'));
         forecastYearsInput.value = val;
         createAllGranularInputs(val);
+        
+        // Re-render streams if year count changed (optional, but good for sync)
+        document.getElementById('revenue-streams-list').innerHTML = '';
+        revenueStreams = [];
     });
 });
 
@@ -93,7 +185,7 @@ monthlyDetailSelect.addEventListener('change', (e) => {
     monthlyDetailInput.value = e.target.value;
 });
 
-const defaults = ['default_revenue_growth', 'default_cogs_pct', 'default_fixed_opex', 'default_capex', 'default_dso_days', 'default_dio_days', 'default_dpo_days', 'default_annual_debt_repayment'];
+const defaults = ['default_cogs_pct', 'default_fixed_opex', 'default_capex', 'default_dso_days', 'default_dio_days', 'default_dpo_days', 'default_annual_debt_repayment'];
 defaults.forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
         createAllGranularInputs(parseInt(forecastYearsInput.value));
@@ -156,8 +248,21 @@ function collectInputData() {
         return list;
     };
 
+    // Collect Revenue Streams Manual Overrides
+    const collectedStreams = [];
+    const streamCards = document.querySelectorAll('.stream-card');
+    streamCards.forEach(card => {
+        const inputs = card.querySelectorAll('input.stream-val-input');
+        const values = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+        const name = card.querySelector('h4').textContent;
+        collectedStreams.push({ name: name, values: values });
+    });
+
     return {
         initial_revenue: parseFloat(document.getElementById('initial_revenue').value),
+        revenue_growth_rates: [parseFloat(document.getElementById('default_revenue_growth').value)/100], // Fallback only
+        revenue_streams: collectedStreams, // NEW PAYLOAD
+        
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
         depreciation_rate: parseFloat(document.getElementById('depreciation_rate').value) / 100,
@@ -166,7 +271,7 @@ function collectInputData() {
         interest_rate: parseFloat(document.getElementById('interest_rate').value) / 100,
         years: years,
         monthly_detail: parseInt(monthlyDetailInput.value),
-        revenue_growth_rates: collectList('revenue_growth', true, 'default_revenue_growth'),
+        
         cogs_pct_rates: collectList('cogs_pct', true, 'default_cogs_pct'),
         fixed_opex_rates: collectList('fixed_opex', false, 'default_fixed_opex'),
         capex_rates: collectList('capex', false, 'default_capex'),
@@ -228,7 +333,15 @@ function renderResults(data, currency) {
 
     // Mapping keys from display_data
     const d = data["display_data"];
-    insertRow(isBody, "Revenue", d["Revenue"], true);
+    
+    // Inject Stream Rows if they exist in display_data (We need to check app.py response)
+    if (d["Stream_Rows"]) {
+        d["Stream_Rows"].forEach(stream => {
+            insertRow(isBody, stream.name, stream.values, false);
+        });
+    }
+
+    insertRow(isBody, "Total Revenue", d["Revenue"], true);
     insertRow(isBody, "COGS", d["COGS"]);
     insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
     insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
@@ -287,16 +400,8 @@ function renderCharts(data) {
 
 document.addEventListener('DOMContentLoaded', () => { 
     const defaultYears = 5; 
-    
-    // Set the hidden input value so the first submit works
     forecastYearsInput.value = defaultYears;
-    
-    // Generate the initial UI boxes
     createAllGranularInputs(defaultYears); 
-
-    // Highlight the 5Y button visually on load
     const defaultBtn = document.querySelector(`.year-select-btn[data-value="${defaultYears}"]`);
-    if (defaultBtn) {
-        defaultBtn.classList.add('active', 'selected-year-btn');
-    }
+    if (defaultBtn) defaultBtn.classList.add('active', 'selected-year-btn');
 });
