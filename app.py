@@ -17,6 +17,9 @@ def get_inputs_from_request(data):
         if isinstance(val, str): val = [val]
         return [float(x) for x in val if x is not None]
 
+    # Revenue Streams comes as list of objects
+    revenue_streams = data.get('revenue_streams', [])
+
     return {
         "initial_revenue": float(data.get('initial_revenue') or 0.0),
         "tax_rate": float(data.get('tax_rate') or 0.0),
@@ -35,6 +38,7 @@ def get_inputs_from_request(data):
         "dio_days_list": get_list_float('dio_days_list'),
         "dpo_days_list": get_list_float('dpo_days_list'),
         "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
+        "revenue_streams": revenue_streams 
     }
 
 @app.route('/api/forecast', methods=['POST'])
@@ -56,16 +60,35 @@ def export_to_excel():
         labels_all = results['Display_Labels']
         labels_is = labels_all[1:]
         
-        # Prepare DataFrames based on display_data
         d = results['display_data']
-        is_map = {k: d[k] for k in ["Revenue", "COGS", "Gross Profit", "Fixed Opex", "Depreciation", "EBIT", "Interest", "Taxes", "Net Income"]}
+        
+        # Build Income Statement Dict
+        # Add granular streams first
+        is_map = {}
+        if d.get("Stream_Rows"):
+            for s in d["Stream_Rows"]:
+                is_map[s['name']] = s['values']
+                
+        # Add standard IS lines
+        is_map.update({
+            "Total Revenue": d["Revenue"],
+            "COGS": d["COGS"],
+            "Gross Profit": d["Gross Profit"],
+            "Fixed Opex": d["Fixed Opex"],
+            "Depreciation": d["Depreciation"],
+            "EBIT": d["EBIT"],
+            "Interest": d["Interest"],
+            "Taxes": d["Taxes"],
+            "Net Income": d["Net Income"]
+        })
+        
         bs_map = {k: d[k] for k in ["Cash", "AR", "Inventory", "PPE", "Total Assets", "AP", "Debt", "RE", "Total LiabEq"]}
         cf_map = { 
             "Net Income": d["CF_NI"], 
             "Depreciation": d["CF_Dep"], 
             "NWC Change": d["CF_NWC"], 
             "CFO": d["CFO"], 
-            "CFI": d["CFI"] if len(d["CFI"]) == len(labels_is) else d["CFI"][1:], # Alignment Fix
+            "CFI": d["CFI"] if len(d["CFI"]) == len(labels_is) else d["CFI"][1:], 
             "CFF": d["CFF"], 
             "Net Change": d["Net Cash Change"]
         }
@@ -78,6 +101,8 @@ def export_to_excel():
         output.seek(0)
         return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='Forecast.xlsx')
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
