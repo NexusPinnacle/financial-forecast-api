@@ -12,16 +12,20 @@ def home():
     return render_template('index.html')    
 
 def get_inputs_from_request(data):
-    def get_list_float(key):
+    def get_list_float(key, default_val=0.0):
         val = data.get(key, [])
+        if not val:
+            # If the frontend sent nothing, create a list of zeros 
+            # based on the number of years requested
+            years = int(data.get('years', 5))
+            return [default_val] * years
         if isinstance(val, str): val = [val]
         return [float(x) for x in val if x is not None]
 
-    # Revenue Streams comes as list of objects
-    revenue_streams = data.get('revenue_streams', [])
-
+    # This ensures that even if 'initial_revenue' is missing, it becomes 0.0
     return {
         "initial_revenue": float(data.get('initial_revenue') or 0.0),
+        "revenue_growth_rates": get_list_float('revenue_growth_rates'), # Safe default
         "tax_rate": float(data.get('tax_rate') or 0.0),
         "initial_ppe": float(data.get('initial_ppe') or 0.0),
         "depreciation_rate": float(data.get('depreciation_rate') or 0.0),
@@ -30,15 +34,14 @@ def get_inputs_from_request(data):
         "interest_rate": float(data.get('interest_rate') or 0.0),
         "years": int(data.get('years', 5)),
         "monthly_detail": int(data.get('monthly_detail', 0)),
-        "revenue_growth_rates": get_list_float('revenue_growth_rates'),
-        "cogs_pct_rates": get_list_float('cogs_pct_rates'),
+        "revenue_streams": data.get('revenue_streams', []),
+        "cogs_pct_rates": get_list_float('cogs_pct_rates', 0.4), # Default 40% if missing
         "fixed_opex_rates": get_list_float('fixed_opex_rates'),
         "capex_rates": get_list_float('capex_rates'),
         "dso_days_list": get_list_float('dso_days_list'),
         "dio_days_list": get_list_float('dio_days_list'),
         "dpo_days_list": get_list_float('dpo_days_list'),
         "annual_debt_repayment_list": get_list_float('annual_debt_repayment_list'),
-        "revenue_streams": revenue_streams 
     }
 
 @app.route('/api/forecast', methods=['POST'])
