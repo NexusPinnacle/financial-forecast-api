@@ -55,44 +55,18 @@ function renderStream(stream) {
     const monthlyVals = [];
     const monthlyGrowth = Math.pow((1 + stream.growth/100), 1/12) - 1;
     let currentMonthlyRev = (stream.price * stream.qty) / 12; // annualized to monthly
-
+    
     // If unit sales/service, we often think in "Units per month * Price". 
     // If input was annual Qty, divide by 12.
     // Let's assume Inputs are Annualized Run Rates for simplicity in this UI
-
+    
     for(let i=0; i < stream.months; i++) {
         // Apply growth every month (compounded) or step up annually? 
         // Let's do step up annually for cleaner "Grid" look, or monthly compound.
         // Doing monthly compound for smoothness.
-
         if (i > 0) currentMonthlyRev = currentMonthlyRev * (1 + monthlyGrowth);
         monthlyVals.push(currentMonthlyRev);
     }
-
-    // ... (rest of the header and HTML generation code stays the same)
-    let html = `
-        <div class="stream-header">
-            <h4>${stream.name} <span style="font-weight:normal; font-size:0.8em">(${stream.type})</span></h4>
-            <div>
-                <button type="button" class="remove-stream-btn" onclick="removeStream(${stream.id})">Remove</button>
-            </div>
-        </div>
-        <div class="matrix-scroll-wrapper">
-    `;
-
-    for(let i=0; i < monthlyVals.length; i++) {
-        const val = monthlyVals[i].toFixed(2);
-        html += `
-            <div class="matrix-cell">
-                <label>M${i+1}</label>
-                <input type="number" class="stream-val-input" data-stream="${stream.id}" value="${val}" onchange="updateTotalRevenuePreview()">
-            </div>
-        `;
-    }
-    html += `</div>`;
-    div.innerHTML = html;
-    container.appendChild(div);
-}
 
     // Header
     let html = `
