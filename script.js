@@ -402,3 +402,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultBtn = document.querySelector(`.year-select-btn[data-value="${defaultYears}"]`);
     if (defaultBtn) defaultBtn.classList.add('active', 'selected-year-btn');
 });
+
+
+function reApplySavedData(data) {
+    // This loops through the saved data and puts it back into the boxes
+    Object.keys(granularContainers).forEach(key => {
+        const savedList = data[key + '_rates'] || data[key + '_list'];
+        if (savedList) {
+            savedList.forEach((val, index) => {
+                const input = document.getElementById(`${key}_y${index + 1}`);
+                if (input) {
+                    // Convert back to whole numbers for percentages (e.g., 0.4 to 40)
+                    const isPct = key.includes('pct') || key.includes('rate');
+                    input.value = isPct ? (val * 100).toFixed(1) : val;
+                }
+            });
+        }
+    });
+}
