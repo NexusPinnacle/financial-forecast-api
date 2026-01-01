@@ -209,12 +209,28 @@ annualButtons.forEach(btn => {
         // Redraw the inputs
         createAllGranularInputs(years);
 
-        // 4. Wait a split second for the browser to render the new boxes, then re-fill them
+        
+
+  // 4. Update the Revenue Stream matrices to match the new duration (5 or 10 years)
+        const streamContainer = document.getElementById('revenue-streams-list');
+        streamContainer.innerHTML = ''; // Clear the current list from the screen
+        
+        revenueStreams.forEach(stream => {
+            stream.months = years * 12; // Update the month count for the stream
+            renderStream(stream);       // Re-draw the stream (matrix will now have 60 or 120 boxes)
+        });
+
+        // 5. Restore the values and update the totals at the bottom
         setTimeout(() => {
-            reApplySavedData(currentData);
+            reApplySavedData(currentData); // Puts your numbers back into the boxes
+            updateTotalRevenuePreview();   // Calculates and shows Year 1, 2, 3... Year 10
         }, 50); 
     });
 });
+
+
+
+
 
 monthlyDetailSelect.addEventListener('change', (e) => {
     monthlyDetailInput.value = e.target.value;
@@ -454,4 +470,21 @@ function reApplySavedData(data) {
             });
         }
     });
+
+    // B. Restore Revenue Stream box values
+    if (data.revenue_streams) {
+        const streamCards = document.querySelectorAll('.stream-card');
+        data.revenue_streams.forEach((savedStream, sIndex) => {
+            // Check if the stream card exists on the screen
+            if (streamCards[sIndex]) {
+                const inputs = streamCards[sIndex].querySelectorAll('input.stream-val-input');
+                savedStream.values.forEach((val, vIndex) => {
+                    // Put the value back if the box exists (e.g., first 60 months)
+                    if (inputs[vIndex]) {
+                        inputs[vIndex].value = val.toFixed(2);
+                    }
+                });
+            }
+        });
+    }
 }
