@@ -31,6 +31,16 @@
                     <option value="36">36 Months</option>
                 </select>
             </div>
+
+            <div class="currency-group">
+                <label for="currency_symbol">Currency:</label>
+                <select id="currency_symbol" class="styled-select">
+                    <option value="$" selected>USD ($)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="¥">JPY (¥)</option>
+                </select>
+            </div>
         </div>
         
         <form id="forecastForm">
@@ -81,16 +91,7 @@
             <div class="input-layout">
                 <div class="left-pane">
                     <h3>Core Assumptions (Annual Rates)</h3>
-                    
-                    <div class="input-group">
-                        <label for="currency_symbol">Select Currency:</label>
-                        <select id="currency_symbol" style="flex-basis: 35%;">
-                            <option value="$" selected>USD ($)</option>
-                            <option value="€">EUR (€)</option>
-                            <option value="£">GBP (£)</option>
-                            <option value="¥">JPY (¥)</option>
-                        </select>
-                    </div>
+        
                     
                     <div class="input-group">
                         <label for="initial_revenue">Initial Revenue (Year 0) [Fallback]:</label>
