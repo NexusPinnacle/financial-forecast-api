@@ -259,10 +259,7 @@ function collectInputData() {
     });
 
     return {
-        initial_revenue: parseFloat(document.getElementById('initial_revenue').value),
-        revenue_growth_rates: [parseFloat(document.getElementById('default_revenue_growth').value)/100], // Fallback only
         revenue_streams: collectedStreams, // NEW PAYLOAD
-        
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
         depreciation_rate: parseFloat(document.getElementById('depreciation_rate').value) / 100,
