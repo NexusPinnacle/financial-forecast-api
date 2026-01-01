@@ -53,19 +53,21 @@ function renderStream(stream) {
     // Calculate initial values based on drivers
     // Logic: Base Revenue = Price * Qty. Grows annually by growth %.
     const monthlyVals = [];
-    const monthlyGrowth = Math.pow((1 + stream.growth/100), 1/12) - 1;
-    let currentMonthlyRev = (stream.price * stream.qty) / 12; // annualized to monthly
+    // We use the full annual growth rate now (e.g., 1.10 for 10% growth)
+    const annualGrowthFactor = 1 + (stream.growth / 100);
     
-    // If unit sales/service, we often think in "Units per month * Price". 
-    // If input was annual Qty, divide by 12.
-    // Let's assume Inputs are Annualized Run Rates for simplicity in this UI
-    
+    // Starting Year 1 annual revenue
+    let currentYearlyRevenue = (stream.price * stream.qty); 
+
     for(let i=0; i < stream.months; i++) {
-        // Apply growth every month (compounded) or step up annually? 
-        // Let's do step up annually for cleaner "Grid" look, or monthly compound.
-        // Doing monthly compound for smoothness.
-        if (i >= 12) currentMonthlyRev = currentMonthlyRev * (1 + monthlyGrowth);
-        monthlyVals.push(currentMonthlyRev);
+        // Every time we hit a new year (Month 13, 25, 37...), 
+        // we increase the annual bucket by the growth rate.
+        if (i > 0 && i % 12 === 0) {
+            currentYearlyRevenue = currentYearlyRevenue * annualGrowthFactor;
+        }
+
+        // The monthly box always shows the current annual bucket divided by 12
+        monthlyVals.push(currentYearlyRevenue / 12);
     }
 
     // Header
