@@ -176,8 +176,10 @@ annualButtons.forEach(btn => {
         // Redraw the inputs
         createAllGranularInputs(years);
 
-        // --- NEW: Re-apply the saved data to the new inputs ---
-        reApplySavedData(currentData); 
+        // 4. Wait a split second for the browser to render the new boxes, then re-fill them
+        setTimeout(() => {
+            reApplySavedData(currentData);
+        }, 50); 
     });
 });
 
