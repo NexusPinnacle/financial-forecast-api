@@ -165,19 +165,19 @@ function createAllGranularInputs(numYears) {
 
 annualButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-        annualButtons.forEach(b => {
-            b.classList.remove('active');
-            b.classList.remove('selected-year-btn');
-        });
-        btn.classList.add('active');
+        // --- NEW: Save current data before switching ---
+        const currentData = collectInputData(); 
+
+        annualButtons.forEach(b => b.classList.remove('selected-year-btn'));
         btn.classList.add('selected-year-btn');
-        const val = parseInt(btn.getAttribute('data-value'));
-        forecastYearsInput.value = val;
-        createAllGranularInputs(val);
-        
-        // Re-render streams if year count changed (optional, but good for sync)
-        document.getElementById('revenue-streams-list').innerHTML = '';
-        revenueStreams = [];
+        const years = parseInt(btn.getAttribute('data-value'));
+        forecastYearsInput.value = years;
+
+        // Redraw the inputs
+        createAllGranularInputs(years);
+
+        // --- NEW: Re-apply the saved data to the new inputs ---
+        reApplySavedData(currentData); 
     });
 });
 
