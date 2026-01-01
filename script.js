@@ -102,20 +102,51 @@ window.removeStream = function(id) {
     updateTotalRevenuePreview();
 }
 
+
+
+
+
+
 function updateTotalRevenuePreview() {
-    // Sum the first 12 inputs of all streams
-    let totalYr1 = 0;
+    const years = parseInt(forecastYearsInput.value);
+    const container = document.getElementById('annual-revenue-list');
+    container.innerHTML = ''; // Clear existing previews
+
+    // Initialize an array to hold totals for each year [0, 0, 0, 0, 0]
+    let annualTotals = new Array(years).fill(0);
+
     const cards = document.querySelectorAll('.stream-card');
     
     cards.forEach(card => {
         const inputs = card.querySelectorAll('input.stream-val-input');
-        for(let i=0; i<12 && i<inputs.length; i++) {
-            totalYr1 += parseFloat(inputs[i].value) || 0;
-        }
+        
+        inputs.forEach((input, index) => {
+            const yearIndex = Math.floor(index / 12); // Month 0-11 = Yr 0, 12-23 = Yr 1...
+            if (yearIndex < years) {
+                annualTotals[yearIndex] += parseFloat(input.value) || 0;
+            }
+        });
     });
-    
-    document.getElementById('total-revenue-preview').textContent = totalYr1.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+    // Get currency symbol for the label
+    const currency = document.getElementById('currency_symbol').value;
+
+    // Create a small UI element for each year
+    annualTotals.forEach((total, i) => {
+        const yearDiv = document.createElement('div');
+        yearDiv.style.minWidth = "120px";
+        yearDiv.innerHTML = `
+            <strong style="display:block; font-size: 0.85em; color: #666;">Year ${i + 1}:</strong>
+            <span style="font-weight: bold; color: #333;">${currency}${total.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+        `;
+        container.appendChild(yearDiv);
+    });
 }
+
+
+
+
+
 
 // --- CORE TABS & UTILS ---
 
