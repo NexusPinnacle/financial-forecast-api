@@ -64,7 +64,7 @@ function renderStream(stream) {
         // Apply growth every month (compounded) or step up annually? 
         // Let's do step up annually for cleaner "Grid" look, or monthly compound.
         // Doing monthly compound for smoothness.
-        if (i > 0) currentMonthlyRev = currentMonthlyRev * (1 + monthlyGrowth);
+        if (i >= 12) currentMonthlyRev = currentMonthlyRev * (1 + monthlyGrowth);
         monthlyVals.push(currentMonthlyRev);
     }
 
