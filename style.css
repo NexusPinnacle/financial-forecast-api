@@ -334,3 +334,29 @@ thead th { background-color: #f0f0f0; color: #333; }
     border: 1px solid #eee;
 }
 .matrix-cell input:focus { border-color: #3b84f5; outline: none; }
+
+
+/* Align Currency Group with other settings */
+.currency-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.currency-group label {
+    font-weight: bold;
+    margin: 0;
+    flex-basis: auto; /* Reset from the 75% basis in left-pane */
+}
+
+/* Ensure the currency select matches the Monthly Detail style */
+#currency_symbol.styled-select {
+    width: 110px; /* Specific width for the top row */
+    padding: 8px;
+    text-align: left; /* Better for dropdown readability */
+}
+
+/* Remove or update the old flex-basis that was specific to the left-pane */
+.input-group select#currency_symbol {
+    flex-basis: auto; 
+}
