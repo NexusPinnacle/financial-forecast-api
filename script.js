@@ -326,6 +326,7 @@ annualButtons.forEach(btn => {
         setTimeout(() => {
             reApplySavedData(currentData); // Puts your numbers back into the boxes
             updateTotalRevenuePreview();   // Calculates and shows Year 1, 2, 3... Year 10
+            refreshCogsBuilder(); // --- ADD THIS LINE ---
         }, 50); 
     });
 });
