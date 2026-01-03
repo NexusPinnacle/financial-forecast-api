@@ -7,7 +7,7 @@ def generate_forecast(
     dso_days_list, dio_days_list, dpo_days_list,
     initial_debt, initial_cash, interest_rate,
     annual_debt_repayment_list, years=5, monthly_detail=0,
-    revenue_streams=None # New Parameter
+    revenue_streams=None, # New Parameter
 
     cogs_streams=None, # ADD THIS PARAMETER
     **kwargs # Add this to prevent errors if extra data is sent
