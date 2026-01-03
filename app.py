@@ -35,6 +35,9 @@ def get_inputs_from_request(data):
         "years": int(data.get('years', 5)),
         "monthly_detail": int(data.get('monthly_detail', 0)),
         "revenue_streams": data.get('revenue_streams', []),
+        
+        "cogs_streams": data.get('cogs_streams', []), # ADD THIS LINE
+        
         "cogs_pct_rates": get_list_float('cogs_pct_rates', 0.4), # Default 40% if missing
         "fixed_opex_rates": get_list_float('fixed_opex_rates'),
         "capex_rates": get_list_float('capex_rates'),
