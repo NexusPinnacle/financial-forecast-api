@@ -88,6 +88,28 @@
         </div>
 </div>
             </div>
+
+<div class="cogs-builder-container" style="margin-top: 30px; border-top: 2px solid #eee; pt-20px;">
+    <h2>COGS Builder (Direct Costs)</h2>
+    <p>Define cost margins for your streams or add independent direct costs.</p>
+
+    <div id="stream-cogs-list"></div>
+
+    <div class="add-stream-ui" style="background: #fff9f9; border: 1px solid #ffdada;">
+        <input type="text" id="new_cogs_name" placeholder="Extra COGS Name (e.g. Hosting)">
+        <input type="number" id="new_cogs_pct" placeholder="Default %" step="0.1">
+        <button type="button" id="addExtraCogsBtn" class="add-btn" style="background-color: #d12a2a;">Add Extra COGS</button>
+    </div>
+
+    <div id="cogs-previews-container" style="margin-top: 15px; padding: 10px; background: #fff1f1; border-radius: 6px;">
+        <h4 style="margin-top: 0; color: #d12a2a;">Annual COGS Totals (Estimated):</h4>
+        <div id="annual-cogs-list" style="display: flex; flex-wrap: wrap; gap: 20px;"></div>
+    </div>
+</div>
+
+
+
+            
             <h2>Baseline & Assumptions</h2>
             
             <div class="input-layout">
