@@ -42,6 +42,7 @@ def generate_forecast(
     
     # REVENUE LOGIC: Streams or Fallback
     revenue = [0.0] * L
+    cogs = [0.0] * L
     stream_display_data = [] # For breakdown
 
     if revenue_streams and len(revenue_streams) > 0:
@@ -99,7 +100,7 @@ def generate_forecast(
 
 
     # Other Vectors
-    cogs, gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(8)]
+    gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(7)]
     ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
     nwc, change_nwc, cff, net_cash = [[0.0]*L for _ in range(4)]
 
