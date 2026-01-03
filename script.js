@@ -409,8 +409,29 @@ function collectInputData() {
         collectedStreams.push({ name: name, values: values });
     });
 
+
+    const collectedCogs = [];
+    // This looks for all the matrix boxes in your new COGS module
+    const cogsCards = document.querySelectorAll('.cogs-card');
+    cogsCards.forEach(card => {
+        const name = card.querySelector('h4').textContent;
+        const inputs = card.querySelectorAll('.cogs-val-input');
+        
+        // We calculate the actual $ amount here to send to the backend
+        const values = Array.from(inputs).map((inp, idx) => {
+            // Find the corresponding revenue value to calculate the $ cost
+            // (Note: This logic assumes the order of COGS cards matches Revenue cards)
+            return parseFloat(inp.value) || 0; 
+        });
+        
+        collectedCogs.push({ name: name, values: values });
+    });
+
     return {
         revenue_streams: collectedStreams, // NEW PAYLOAD
+
+        cogs_streams: collectedCogs, // SEND THIS TO PYTHON
+        
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
         depreciation_rate: parseFloat(document.getElementById('depreciation_rate').value) / 100,
