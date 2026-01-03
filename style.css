@@ -360,3 +360,82 @@ thead th { background-color: #f0f0f0; color: #333; }
 .input-group select#currency_symbol {
     flex-basis: auto; 
 }
+
+
+/* --- COGS Builder Specifics --- */
+.cogs-builder-container {
+    background-color: #fff9f9; /* Soft red background */
+    border: 1px solid #ffdada;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+/* Custom styling for COGS matrix cards to differentiate from Revenue */
+.stream-card.cogs-card {
+    border-left: 5px solid #d12a2a; /* Red stripe for costs */
+    background: #fff;
+}
+
+.cogs-card .stream-header h4 {
+    color: #a31d1d;
+}
+
+/* Red theme for the COGS input boxes */
+.cogs-val-input {
+    width: 70px;
+    padding: 4px;
+    font-size: 0.85em;
+    text-align: right;
+    border: 1px solid #ffebeb;
+    background-color: #fffdfd;
+}
+
+.cogs-val-input:focus {
+    border-color: #d12a2a;
+    outline: none;
+    background-color: #fff;
+}
+
+/* Extra COGS Add Row */
+.add-stream-ui {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 6px;
+    border: 1px dashed #d12a2a;
+}
+
+.add-stream-ui input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Labels for the Years in the COGS Preview */
+#annual-cogs-list strong {
+    color: #a31d1d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive fix for the Matrix Wrappers */
+.matrix-scroll-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+.matrix-scroll-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.matrix-scroll-wrapper::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
