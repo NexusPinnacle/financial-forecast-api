@@ -197,10 +197,18 @@ function refreshCogsBuilder() {
 function generateMatrixInputs(id, type, years, defVal) {
     let html = '';
     for(let i=0; i < years * 12; i++) {
+        // Add a data-unit attribute to help collectInputData know if it's % or $
+        const unit = type === 'stream-cogs' ? '%' : '$';
         html += `
             <div class="matrix-cell">
                 <label>M${i+1}</label>
-                <input type="number" class="cogs-val-input" data-parent="${id}" data-type="${type}" value="${defVal}" onchange="updateTotalCogsPreview()">
+                <input type="number" 
+                       class="cogs-val-input" 
+                       data-parent="${id}" 
+                       data-type="${type}" 
+                       data-unit="${unit}" 
+                       value="${defVal}" 
+                       onchange="updateTotalCogsPreview()">
             </div>
         `;
     }
@@ -413,21 +421,26 @@ function collectInputData() {
     });
 
 
-    const collectedCogs = [];
-    // This looks for all the matrix boxes in your new COGS module
+const collectedCogs = [];
     const cogsCards = document.querySelectorAll('.cogs-card');
-    cogsCards.forEach(card => {
+    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+
+    cogsCards.forEach((card, cardIdx) => {
         const name = card.querySelector('h4').textContent;
-        const inputs = card.querySelectorAll('.cogs-val-input');
+        const marginInputs = card.querySelectorAll('.cogs-val-input');
         
-        // We calculate the actual $ amount here to send to the backend
-        const values = Array.from(inputs).map((inp, idx) => {
-            // Find the corresponding revenue value to calculate the $ cost
-            // (Note: This logic assumes the order of COGS cards matches Revenue cards)
-            return parseFloat(inp.value) || 0; 
+        // Find the matching revenue inputs to calculate $ cost
+        const matchingRevInputs = revCards[cardIdx]?.querySelectorAll('.stream-val-input');
+
+        const dollarValues = Array.from(marginInputs).map((marginInp, mIdx) => {
+            const marginPct = (parseFloat(marginInp.value) || 0) / 100;
+            const revVal = matchingRevInputs ? (parseFloat(matchingRevInputs[mIdx].value) || 0) : 0;
+            
+            // Return the actual $ cost for this month
+            return revVal * marginPct; 
         });
-        
-        collectedCogs.push({ name: name, values: values });
+
+        collectedCogs.push({ name: name, values: dollarValues });
     });
 
     return {
@@ -509,6 +522,14 @@ function renderResults(data, currency) {
     // Inject Stream Rows if they exist in display_data (We need to check app.py response)
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
+            // --- ADD THIS FILTER ---
+        // If the stream name contains "COGS", don't put it in the Revenue section
+        if (stream.name.includes("COGS")) {
+            return; 
+        }
+        insertRow(isBody, stream.name, stream.values, false);
+    });
+}
             insertRow(isBody, stream.name, stream.values, false);
         });
     }
