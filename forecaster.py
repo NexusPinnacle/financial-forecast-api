@@ -8,6 +8,10 @@ def generate_forecast(
     initial_debt, initial_cash, interest_rate,
     annual_debt_repayment_list, years=5, monthly_detail=0,
     revenue_streams=None # New Parameter
+
+    cogs_streams=None, # ADD THIS PARAMETER
+    **kwargs # Add this to prevent errors if extra data is sent
+
 ):
     # --- 1. SETUP PERIODS (Always Monthly internally) ---
     num_months = years * 12
