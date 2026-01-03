@@ -530,9 +530,7 @@ function renderResults(data, currency) {
         insertRow(isBody, stream.name, stream.values, false);
     });
 }
-            insertRow(isBody, stream.name, stream.values, false);
-        });
-    }
+
 
     insertRow(isBody, "Total Revenue", d["Revenue"], true);
     insertRow(isBody, "COGS", d["COGS"]);
