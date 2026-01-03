@@ -42,6 +42,7 @@ document.getElementById('addStreamBtn').addEventListener('click', () => {
     revenueStreams.push(streamObj);
     renderStream(streamObj);
     updateTotalRevenuePreview();
+    refreshCogsBuilder();
 });
 
 function renderStream(stream) {
@@ -100,6 +101,7 @@ window.removeStream = function(id) {
     revenueStreams = revenueStreams.filter(s => s.id !== id);
     document.getElementById(`stream-${id}`).remove();
     updateTotalRevenuePreview();
+    refreshCogsBuilder();
 }
 
 
@@ -609,3 +611,26 @@ function reApplySavedData(data) {
         });
     }
 }
+
+document.getElementById('addExtraCogsBtn').addEventListener('click', () => {
+    const name = document.getElementById('new_cogs_name').value || 'Extra COGS';
+    const pct = parseFloat(document.getElementById('new_cogs_pct').value) || 0;
+    
+    extraCogs.push({
+        id: Date.now(),
+        name: name,
+        defaultPct: pct
+    });
+    
+    refreshCogsBuilder();
+    
+    // Clear inputs
+    document.getElementById('new_cogs_name').value = '';
+    document.getElementById('new_cogs_pct').value = '';
+});
+
+// Also add the remover for extra cogs
+window.removeExtraCogs = function(id) {
+    extraCogs = extraCogs.filter(c => c.id !== id);
+    refreshCogsBuilder();
+};
