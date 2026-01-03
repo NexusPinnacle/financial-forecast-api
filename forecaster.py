@@ -76,6 +76,29 @@ def generate_forecast(
             idx = i - 1
             revenue[i] = revenue[i-1] * (1 + rev_growth_monthly[idx])
 
+
+
+
+# Initialize COGS as a list of zeros for every month
+    cogs = np.zeros(num_months)
+
+    # If the user provided detailed COGS streams, sum them up
+    if cogs_streams:
+        for stream in cogs_streams:
+            stream_values = np.array(stream.get('values', []))
+            # Ensure the data fits our timeframe
+            length = min(len(stream_values), num_months)
+            cogs[:length] += stream_values[:length]
+    else:
+        # Fallback to the old percentage method if no detailed COGS exist
+        cogs = revenue * expand_to_months(cogs_pct_rates)
+
+
+
+
+
+
+
     # Other Vectors
     cogs, gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(8)]
     ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
