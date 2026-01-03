@@ -79,19 +79,18 @@ def generate_forecast(
 
 
 
-# Initialize COGS as a list of zeros for every month
-    cogs = np.zeros(num_months)
-
-    # If the user provided detailed COGS streams, sum them up
-    if cogs_streams:
+# --- NEW COGS LOGIC ---
+    # We pre-calculate COGS for all months before the loop
+    if cogs_streams and len(cogs_streams) > 0:
         for stream in cogs_streams:
-            stream_values = np.array(stream.get('values', []))
-            # Ensure the data fits our timeframe
-            length = min(len(stream_values), num_months)
-            cogs[:length] += stream_values[:length]
+            vals = stream.get('values', [])
+            # Note: COGS % builder sends $ amounts (calculated in JS)
+            for i in range(min(len(vals), num_months)):
+                cogs[i+1] += vals[i]
     else:
-        # Fallback to the old percentage method if no detailed COGS exist
-        cogs = revenue * expand_to_months(cogs_pct_rates)
+        # Fallback: Apply the annual COGS % rates to the revenue vector
+        for i in range(1, L):
+            cogs[i] = revenue[i] * cogs_pct_m[i-1]
 
 
 
@@ -126,7 +125,7 @@ def generate_forecast(
     for i in range(1, L):
         idx = i - 1
         # Revenue is already calculated
-        cogs[i] = revenue[i] * cogs_pct_m[idx]
+        # cogs[i] is already set above, so we just calculate the rest:
         gp[i] = revenue[i] - cogs[i]
         opex[i] = fixed_opex_monthly[idx]
         dep[i] = ppe[i-1] * m_dep_rate
