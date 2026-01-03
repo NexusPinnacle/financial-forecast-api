@@ -148,6 +148,106 @@ function updateTotalRevenuePreview() {
 
 
 
+let extraCogs = []; // Store non-stream related COGS
+
+function refreshCogsBuilder() {
+    const container = document.getElementById('stream-cogs-list');
+    container.innerHTML = '<h3>Stream-Linked Margins (%)</h3>';
+    const years = parseInt(forecastYearsInput.value);
+
+    // 1. Create rows for existing Revenue Streams
+    revenueStreams.forEach(stream => {
+        const div = document.createElement('div');
+        div.className = 'stream-card cogs-card';
+        div.innerHTML = `
+            <div class="stream-header">
+                <h4>${stream.name} - COGS Margin (%)</h4>
+            </div>
+            <div class="matrix-scroll-wrapper">
+                ${generateMatrixInputs(stream.id, 'stream-cogs', years, 40)} 
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    // 2. Add rows for "Extra" COGS
+    if(extraCogs.length > 0) {
+        container.innerHTML += '<h3>Additional Direct Costs</h3>';
+        extraCogs.forEach(cogs => {
+            const div = document.createElement('div');
+            div.className = 'stream-card cogs-card';
+            div.innerHTML = `
+                <div class="stream-header">
+                    <h4>${cogs.name}</h4>
+                    <button type="button" class="remove-stream-btn" onclick="removeExtraCogs(${cogs.id})">Remove</button>
+                </div>
+                <div class="matrix-scroll-wrapper">
+                    ${generateMatrixInputs(cogs.id, 'extra-cogs', years, cogs.defaultPct)}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+    updateTotalCogsPreview();
+}
+
+// Helper to generate the 60 or 120 input boxes
+function generateMatrixInputs(id, type, years, defVal) {
+    let html = '';
+    for(let i=0; i < years * 12; i++) {
+        html += `
+            <div class="matrix-cell">
+                <label>M${i+1}</label>
+                <input type="number" class="cogs-val-input" data-parent="${id}" data-type="${type}" value="${defVal}" onchange="updateTotalCogsPreview()">
+            </div>
+        `;
+    }
+    return html;
+}
+
+
+
+
+
+function updateTotalCogsPreview() {
+    const years = parseInt(forecastYearsInput.value);
+    const container = document.getElementById('annual-cogs-list');
+    container.innerHTML = '';
+    let annualCogsTotals = new Array(years).fill(0);
+
+    // 1. Calculate Linked COGS (Revenue * COGS %)
+    const streamCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+    const cogsCards = document.querySelectorAll('.cogs-card');
+
+    streamCards.forEach((revCard, sIdx) => {
+        const revInputs = revCard.querySelectorAll('.stream-val-input');
+        const cogsInputs = cogsCards[sIdx]?.querySelectorAll('.cogs-val-input');
+        
+        revInputs.forEach((revInp, mIdx) => {
+            const margin = cogsInputs ? (parseFloat(cogsInputs[mIdx].value) / 100) : 0;
+            const cost = (parseFloat(revInp.value) || 0) * margin;
+            const yIdx = Math.floor(mIdx / 12);
+            if(yIdx < years) annualCogsTotals[yIdx] += cost;
+        });
+    });
+
+    // 2. Render the totals
+    const currency = document.getElementById('currency_symbol').value;
+    annualCogsTotals.forEach((total, i) => {
+        const div = document.createElement('div');
+        div.style.minWidth = "120px";
+        div.innerHTML = `<strong style="display:block; font-size:0.8em;">Year ${i+1}:</strong>
+                         <span style="font-weight:bold;">${currency}${total.toLocaleString(undefined, {maximumFractionDigits:0})}</span>`;
+        container.appendChild(div);
+    });
+}
+
+
+
+
+
+
+
 // --- CORE TABS & UTILS ---
 
 function openTab(evt, tabName) {
