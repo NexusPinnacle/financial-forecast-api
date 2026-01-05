@@ -424,7 +424,8 @@ function collectInputData() {
 const collectedCogs = [];
     const cogsCards = document.querySelectorAll('.cogs-card');
     const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
-
+    const extraCogsCards = document.querySelectorAll('.stream-card.cogs-card'); // Ensure these have the right class
+    
     cogsCards.forEach((card, cardIdx) => {
         const name = card.querySelector('h4').textContent;
         const marginInputs = card.querySelectorAll('.cogs-val-input');
