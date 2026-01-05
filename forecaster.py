@@ -81,23 +81,18 @@ def generate_forecast(
 
 
 # --- NEW COGS LOGIC ---
-if cogs_streams and len(cogs_streams) > 0:
-    for stream in cogs_streams:
-        vals = stream.get('values', [])
-        formatted_vals = vals[:num_months]
-        if len(formatted_vals) < num_months:
-            formatted_vals.extend([0.0] * (num_months - len(formatted_vals)))
-        
-        # Add to total COGS aggregator
-        for i in range(len(formatted_vals)):
-            cogs[i+1] += formatted_vals[i]
-            
-        # Add to display data but mark it so the frontend knows it's NOT revenue
-        stream_display_data.append({
-            'name': stream.get('name', 'Cost'),
-            'type': 'cost', # Add this flag
-            'raw_values': [0.0] + formatted_vals
-        })
+    # We pre-calculate COGS for all months before the loop
+    if cogs_streams and len(cogs_streams) > 0:
+        for stream in cogs_streams:
+            vals = stream.get('values', [])
+            # Note: COGS % builder sends $ amounts (calculated in JS)
+            for i in range(min(len(vals), num_months)):
+                cogs[i+1] += vals[i]
+    else:
+        # Fallback: Apply the annual COGS % rates to the revenue vector
+        for i in range(1, L):
+            cogs[i] = revenue[i] * cogs_pct_m[i-1]
+
 
 
 
