@@ -424,8 +424,7 @@ function collectInputData() {
 const collectedCogs = [];
     const cogsCards = document.querySelectorAll('.cogs-card');
     const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
-    const extraCogsCards = document.querySelectorAll('.stream-card.cogs-card'); // Ensure these have the right class
-    
+
     cogsCards.forEach((card, cardIdx) => {
         const name = card.querySelector('h4').textContent;
         const marginInputs = card.querySelectorAll('.cogs-val-input');
@@ -524,8 +523,8 @@ function renderResults(data, currency) {
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
             // --- ADD THIS FILTER ---
-            if (stream.type === 'cost' || stream.name.toLowerCase().includes("cogs")) {
-            // Optional: Insert into COGS section instead of skipping
+        // If the stream name contains "COGS", don't put it in the Revenue section
+        if (stream.name.includes("COGS")) {
             return; 
         }
         insertRow(isBody, stream.name, stream.values, false);
