@@ -82,19 +82,38 @@ def generate_forecast(
 
 # --- NEW COGS LOGIC ---
     # We pre-calculate COGS for all months before the loop
-    if cogs_streams and len(cogs_streams) > 0:
-        for stream in cogs_streams:
-            vals = stream.get('values', [])
-            # Note: COGS % builder sends $ amounts (calculated in JS)
-            for i in range(min(len(vals), num_months)):
-                cogs[i+1] += vals[i]
-    else:
-        # Fallback: Apply the annual COGS % rates to the revenue vector
-        for i in range(1, L):
-            cogs[i] = revenue[i] * cogs_pct_m[i-1]
+   if cogs_streams and len(cogs_streams) > 0:
+    for stream in cogs_streams:
+        vals = stream.get('values', [])
+        formatted_vals = vals[:num_months]
+        # Pad if necessary
+        if len(formatted_vals) < num_months:
+            formatted_vals.extend([0.0] * (num_months - len(formatted_vals)))
+            
+        # Add to master COGS array (starting at index 1)
+        for i in range(len(formatted_vals)):
+            cogs[i+1] += formatted_vals[i]
+            
+        # Add to display data so it can be shown as a line item
+        stream_display_data.append({
+            'name': stream.get('name', 'Cost Stream'),
+            'raw_values': [0.0] + formatted_vals,
+            'is_cost': True # Flag for the frontend
+        })
+else:
+    # Fallback: Apply the annual COGS % rates
+    for i in range(1, L):
+        cogs[i] = revenue[i] * cogs_pct_m[i-1]
 
-
-
+# In the return dictionary, include the flag in Stream_Rows
+final_stream_rows = []
+for s in stream_display_data:
+    agg = get_display_val(s['raw_values'], True)
+    final_stream_rows.append({
+        'name': s['name'],
+        'values': agg[1:],
+        'is_cost': s.get('is_cost', False) # Pass the flag to JS
+    })
 
 
 
