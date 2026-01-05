@@ -523,8 +523,8 @@ function renderResults(data, currency) {
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
             // --- ADD THIS FILTER ---
-        // If the stream name contains "COGS", don't put it in the Revenue section
-        if (stream.name.includes("COGS")) {
+            if (stream.type === 'cost' || stream.name.toLowerCase().includes("cogs")) {
+            // Optional: Insert into COGS section instead of skipping
             return; 
         }
         insertRow(isBody, stream.name, stream.values, false);
