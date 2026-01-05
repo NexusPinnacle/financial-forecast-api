@@ -428,22 +428,19 @@ const collectedCogs = [];
     cogsCards.forEach((card, cardIdx) => {
         const name = card.querySelector('h4').textContent;
         const marginInputs = card.querySelectorAll('.cogs-val-input');
-        // Check if this is a linked margin or an "Extra COGS"
-    const type = marginInputs[0]?.getAttribute('data-type');
-    
-        if (type === 'stream-cogs') {
-            const matchingRevInputs = revCards[cardIdx]?.querySelectorAll('.stream-val-input');
-            const dollarValues = Array.from(marginInputs).map((marginInp, mIdx) => {
-                const marginPct = (parseFloat(marginInp.value) || 0) / 100;
-                const revVal = matchingRevInputs ? (parseFloat(matchingRevInputs[mIdx].value) || 0) : 0;
-                return revVal * marginPct; 
-            });
-            collectedCogs.push({ name: name, values: dollarValues, is_cost: true });
-        } else if (type === 'extra-cogs') {
-            // 2. Collect Independent "Extra COGS"
-            const dollarValues = Array.from(marginInputs).map(inp => parseFloat(inp.value) || 0);
-            collectedCogs.push({ name: name, values: dollarValues, is_cost: true });
-        }
+        
+        // Find the matching revenue inputs to calculate $ cost
+        const matchingRevInputs = revCards[cardIdx]?.querySelectorAll('.stream-val-input');
+
+        const dollarValues = Array.from(marginInputs).map((marginInp, mIdx) => {
+            const marginPct = (parseFloat(marginInp.value) || 0) / 100;
+            const revVal = matchingRevInputs ? (parseFloat(matchingRevInputs[mIdx].value) || 0) : 0;
+            
+            // Return the actual $ cost for this month
+            return revVal * marginPct; 
+        });
+
+        collectedCogs.push({ name: name, values: dollarValues });
     });
 
     return {
@@ -524,24 +521,19 @@ function renderResults(data, currency) {
     
     // Inject Stream Rows if they exist in display_data (We need to check app.py response)
     if (d["Stream_Rows"]) {
-        // 1. Render REVENUE streams first
         d["Stream_Rows"].forEach(stream => {
-            if (!stream.is_cost) {
-                insertRow(isBody, stream.name, stream.values, false);
-            }
-        });
-    
-        insertRow(isBody, "Total Revenue", d["Revenue"], true);
-    
-        // 2. Render COGS streams (individual line items)
-        d["Stream_Rows"].forEach(stream => {
-            if (stream.is_cost) {
-                insertRow(isBody, stream.name, stream.values, false);
-            }
-        });
-    }
-    
-    insertRow(isBody, "Total COGS", d["COGS"], true); // Updated label for clarity
+            // --- ADD THIS FILTER ---
+        // If the stream name contains "COGS", don't put it in the Revenue section
+        if (stream.name.includes("COGS")) {
+            return; 
+        }
+        insertRow(isBody, stream.name, stream.values, false);
+    });
+}
+
+
+    insertRow(isBody, "Total Revenue", d["Revenue"], true);
+    insertRow(isBody, "COGS", d["COGS"]);
     insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
     insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
     insertRow(isBody, "Depreciation", d["Depreciation"]);
