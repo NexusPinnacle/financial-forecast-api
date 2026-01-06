@@ -9,10 +9,9 @@ def generate_forecast(
     annual_debt_repayment_list, years=5, monthly_detail=0,
     revenue_streams=None,
     cogs_streams=None,
-    opex_streams=None, # Task 2: New Parameter
+    opex_streams=None,
     **kwargs 
 ):
-    # --- 1. SETUP PERIODS (Always Monthly internally) ---
     num_months = years * 12
     days_in_period = 365.0 / 12.0
     
@@ -22,12 +21,10 @@ def generate_forecast(
             ml.extend([val] * 12)
         return ml[:num_months]
 
-    # Convert annual rates to monthly
     rev_growth_monthly = [((1 + r)**(1/12) - 1) for r in expand_to_months(revenue_growth_rates)]
     fixed_opex_monthly = [x / 12.0 for x in expand_to_months(fixed_opex_rates)]
     capex_monthly = [x / 12.0 for x in expand_to_months(capex_rates)]
     debt_repayment_monthly = [x / 12.0 for x in expand_to_months(annual_debt_repayment_list)]
-    
     cogs_pct_m = expand_to_months(cogs_pct_rates)
     dso_m = expand_to_months(dso_days_list)
     dio_m = expand_to_months(dio_days_list)
@@ -36,177 +33,112 @@ def generate_forecast(
     m_dep_rate = depreciation_rate / 12.0 
     m_int_rate = interest_rate / 12.0
 
-    # --- 2. INITIALIZATION ---
     L = num_months + 1
-    
-    # REVENUE LOGIC
     revenue = [0.0] * L
     cogs = [0.0] * L
-    opex_total = [0.0] * L # Task 2: Internal OpEx tracker
+    opex_total = [0.0] * L
 
     revenue_display_data = [] 
-    cogs_display_data = [] # Task 1: For COGS breakdown
-    opex_display_data = [] # Task 2: For OpEx breakdown
+    cogs_display_data = [] 
+    opex_display_data = []
 
-    # A. Revenue Streams
-    if revenue_streams and len(revenue_streams) > 0:
-        revenue[0] = 0 
+    # 1. Revenue
+    if revenue_streams:
         for stream in revenue_streams:
-            vals = stream.get('values', [])
-            formatted_vals = vals[:num_months]
-            if len(formatted_vals) < num_months:
-                 formatted_vals.extend([0.0] * (num_months - len(formatted_vals)))
-            
-            for i in range(len(formatted_vals)):
-                revenue[i+1] += formatted_vals[i]
-                
-            revenue_display_data.append({
-                'name': stream.get('name', 'Stream'),
-                'type': 'Revenue',
-                'raw_values': [0.0] + formatted_vals
-            })
+            vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
+            for i in range(num_months): revenue[i+1] += vals[i]
+            revenue_display_data.append({'name': stream.get('name'), 'type': 'Revenue', 'raw_values': [0.0] + vals})
     else:
         revenue[0] = initial_revenue
-        for i in range(1, L):
-            revenue[i] = revenue[i-1] * (1 + rev_growth_monthly[i-1])
+        for i in range(1, L): revenue[i] = revenue[i-1] * (1 + rev_growth_monthly[i-1])
 
-    # B. COGS Streams (Task 1 Fix)
-    if cogs_streams and len(cogs_streams) > 0:
+    # 2. COGS
+    if cogs_streams:
         for stream in cogs_streams:
-            vals = stream.get('values', [])
-            formatted_vals = vals[:num_months]
-            if len(formatted_vals) < num_months:
-                 formatted_vals.extend([0.0] * (num_months - len(formatted_vals)))
-            
-            for i in range(len(formatted_vals)):
-                cogs[i+1] += formatted_vals[i]
-            
-            # Store for individual display in P&L
-            cogs_display_data.append({
-                'name': stream.get('name', 'Direct Cost'),
-                'type': 'COGS',
-                'raw_values': [0.0] + formatted_vals
-            })
+            vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
+            for i in range(num_months): cogs[i+1] += vals[i]
+            cogs_display_data.append({'name': stream.get('name'), 'type': 'COGS', 'raw_values': [0.0] + vals})
     else:
-        for i in range(1, L):
-            cogs[i] = revenue[i] * cogs_pct_m[i-1]
+        for i in range(1, L): cogs[i] = revenue[i] * cogs_pct_m[i-1]
 
-    # C. OpEx Streams (Task 2)
-    # Start with base annual rates
-    for i in range(1, L):
-        opex_total[i] = fixed_opex_monthly[i-1]
-
-    if opex_streams and len(opex_streams) > 0:
-        # If user provides granular streams, we reset and use those primarily
-        # but to keep it safe, we ADD them to any existing base rates if both exist.
-        # Requirement says "primary driver", so we clear the base if streams exist:
+    # 3. OpEx
+    for i in range(1, L): opex_total[i] = fixed_opex_monthly[i-1]
+    if opex_streams:
         opex_total = [0.0] * L 
         for stream in opex_streams:
-            vals = stream.get('values', [])
-            formatted_vals = vals[:num_months]
-            if len(formatted_vals) < num_months:
-                 formatted_vals.extend([0.0] * (num_months - len(formatted_vals)))
-            
-            for i in range(len(formatted_vals)):
-                opex_total[i+1] += formatted_vals[i]
-            
-            opex_display_data.append({
-                'name': stream.get('name', 'OpEx'),
-                'type': 'OpEx',
-                'raw_values': [0.0] + formatted_vals
-            })
+            vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
+            for i in range(num_months): opex_total[i+1] += vals[i]
+            opex_display_data.append({'name': stream.get('name'), 'type': 'OpEx', 'raw_values': [0.0] + vals})
 
-    # Other Vectors
     gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(7)]
     ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
-    nwc, change_nwc, cff, net_cash = [[0.0]*L for _ in range(4)]
+    nwc, change_nwc = [[0.0]*L for _ in range(2)]
 
+    # --- YEAR 0 BALANCING LOGIC ---
     ppe[0] = initial_ppe
     debt[0] = initial_debt
     cash[0] = initial_cash
-
-    # Initial Working Cap
+    # Calculate AR/Inv/AP for Year 0 if initial revenue exists
     if revenue[0] > 0:
-        initial_cogs = revenue[0] * cogs_pct_m[0]
-        ar[0] = revenue[0] / days_in_period * dso_m[0]
-        inv[0] = initial_cogs / days_in_period * dio_m[0]
-        ap[0] = initial_cogs / days_in_period * dpo_m[0]
-        re[0] = (cash[0] + ar[0] + inv[0] + ppe[0]) - (ap[0] + debt[0])
+        temp_cogs = revenue[0] * cogs_pct_m[0]
+        ar[0] = (revenue[0] / days_in_period) * dso_m[0]
+        inv[0] = (temp_cogs / days_in_period) * dio_m[0]
+        ap[0] = (temp_cogs / days_in_period) * dpo_m[0]
+    
+    # THE KEY FIX: Retained Earnings is the plug to make Assets = Liabilities + Equity
+    # Assets = Cash + AR + Inv + PPE
+    # Liab & Eq = AP + Debt + RE
+    # Therefore: RE = (Cash + AR + Inv + PPE) - (AP + Debt)
+    re[0] = (cash[0] + ar[0] + inv[0] + ppe[0]) - (ap[0] + debt[0])
+    assets[0] = cash[0] + ar[0] + inv[0] + ppe[0]
+    liab_eq[0] = ap[0] + debt[0] + re[0]
 
-    # --- 3. CORE CALCULATION LOOP ---
     for i in range(1, L):
         idx = i - 1
-        
-        # Income Statement
         gp[i] = revenue[i] - cogs[i]
-        opex[i] = opex_total[i] # Uses combined or granular logic from above
+        opex[i] = opex_total[i]
         dep[i] = ppe[i-1] * m_dep_rate
         ebit[i] = gp[i] - opex[i] - dep[i]
         int_exp[i] = debt[i-1] * m_int_rate
         taxes[i] = max(0, (ebit[i] - int_exp[i]) * tax_rate)
         ni[i] = ebit[i] - int_exp[i] - taxes[i]
         
-        # Balance Sheet
         ppe[i] = ppe[i-1] + capex_monthly[idx] - dep[i]
         ar[i] = (revenue[i] / days_in_period) * dso_m[idx]
         inv[i] = (cogs[i] / days_in_period) * dio_m[idx]
         ap[i] = (cogs[i] / days_in_period) * dpo_m[idx]
         
-        # Debt management
         repayment = min(debt[i-1], debt_repayment_monthly[idx])
         debt[i] = debt[i-1] - repayment
         
-        # Cash Flow & NWC
         nwc[i] = ar[i] + inv[i] - ap[i]
-        change_nwc[i] = nwc[i] - nwc[i-1]
+        change_nwc[i] = nwc[i] - (nwc[i-1] if i > 0 else (ar[0]+inv[0]-ap[0]))
         
         cfo = ni[i] + dep[i] - change_nwc[i]
         cfi = -capex_monthly[idx]
-        cff_val = -repayment
+        cff = -repayment
         
-        cash[i] = cash[i-1] + cfo + cfi + cff_val
+        cash[i] = cash[i-1] + cfo + cfi + cff
         re[i] = re[i-1] + ni[i]
-        
         assets[i] = cash[i] + ar[i] + inv[i] + ppe[i]
         liab_eq[i] = ap[i] + debt[i] + re[i]
 
-    # --- 4. DATA PACKAGING ---
     def get_display_val(arr, is_is=True):
         if monthly_detail > 0:
-            m_slice = arr[1:monthly_detail+1]
-            # Annualize remaining
-            remaining_months = arr[monthly_detail+1:]
-            annual_slices = [sum(remaining_months[i:i+12]) for i in range(0, len(remaining_months), 12)]
-            return m_slice + annual_slices
-        else:
-            return [sum(arr[i:i+12]) for i in range(1, L, 12)]
+            return arr[1:monthly_detail+1] + [sum(arr[i:i+12]) for i in range(monthly_detail+1, L, 12)]
+        return [sum(arr[i:i+12]) for i in range(1, L, 12)]
 
-    labels = []
-    if monthly_detail > 0:
-        labels += [f"Month {i}" for i in range(1, monthly_detail + 1)]
-        start_year = (monthly_detail // 12) + 1
-        labels += [f"Year {i}" for i in range(start_year, years + 1)]
-    else:
-        labels = [f"Year {i}" for i in range(1, years + 1)]
+    labels = [f"Month {i}" for i in range(1, monthly_detail+1)] + [f"Year {i}" for i in range((monthly_detail//12)+1, years+1)] if monthly_detail > 0 else [f"Year {i}" for i in range(1, years+1)]
 
-    # Structure line items for the P&L
     final_stream_rows = []
-    for s in revenue_display_data:
-        final_stream_rows.append({'name': s['name'], 'type': 'Revenue', 'values': get_display_val(s['raw_values'])})
-    for s in cogs_display_data:
-        final_stream_rows.append({'name': s['name'], 'type': 'COGS', 'values': get_display_val(s['raw_values'])})
-    for s in opex_display_data:
-        final_stream_rows.append({'name': s['name'], 'type': 'OpEx', 'values': get_display_val(s['raw_values'])})
-
-    d_rev = get_display_val(revenue)
-    d_ni = get_display_val(ni)
-    d_cash = get_display_val(cash, False)
+    for s in revenue_display_data + cogs_display_data + opex_display_data:
+        final_stream_rows.append({'name': s['name'], 'type': s['type'], 'values': get_display_val(s['raw_values'])})
 
     return {
         "Display_Labels": labels,
         "display_data": {
             "Stream_Rows": final_stream_rows,
-            "Revenue": d_rev,
+            "Revenue": get_display_val(revenue),
             "COGS": get_display_val(cogs),
             "Gross Profit": get_display_val(gp),
             "Fixed Opex": get_display_val(opex),
@@ -214,8 +146,8 @@ def generate_forecast(
             "EBIT": get_display_val(ebit),
             "Interest": get_display_val(int_exp),
             "Taxes": get_display_val(taxes),
-            "Net Income": d_ni,
-            "Cash": d_cash,
+            "Net Income": get_display_val(ni),
+            "Cash": get_display_val(cash, False),
             "AR": get_display_val(ar, False),
             "Inventory": get_display_val(inv, False),
             "PPE": get_display_val(ppe, False),
@@ -224,12 +156,12 @@ def generate_forecast(
             "Debt": get_display_val(debt, False),
             "RE": get_display_val(re, False),
             "Total LiabEq": get_display_val(liab_eq, False),
-            "CF_NI": d_ni,
+            "CF_NI": get_display_val(ni),
             "CF_Dep": get_display_val(dep),
             "CF_NWC": [-x for x in get_display_val(change_nwc)],
-            "CFO": [d_ni[i] + get_display_val(dep)[i] - get_display_val(change_nwc)[i] for i in range(len(d_ni))],
+            "CFO": [get_display_val(ni)[i] + get_display_val(dep)[i] - get_display_val(change_nwc)[i] for i in range(len(labels))],
             "CFI": [-x for x in get_display_val(expand_to_months(capex_rates))],
             "CFF": [-x for x in get_display_val(expand_to_months(annual_debt_repayment_list))],
-            "Net Cash Change": [get_display_val(cash, False)[i] - (get_display_val(cash, False)[i-1] if i>0 else initial_cash) for i in range(len(d_rev))]
+            "Net Cash Change": [get_display_val(cash, False)[i] - (get_display_val(cash, False)[i-1] if i>0 else initial_cash) for i in range(len(labels))]
         }
     }
