@@ -4,11 +4,14 @@ const EXPORT_API_URL = '/api/export';
 const form = document.getElementById('forecastForm');
 const resultsContainer = document.getElementById('results-container');
 const errorMessage = document.getElementById('error-message');
+
 const annualButtons = document.querySelectorAll('.year-select-btn');
 const monthlyDetailSelect = document.getElementById('monthly_detail_select');
+const forecastYearsInput = document.getElementById('forecast_years');
+const monthlyDetailInput = document.getElementById('monthly_detail');
 
+// Granular Containers
 const granularContainers = {
-    revenue_growth: document.getElementById('revenue-growth-container'),
     cogs_pct: document.getElementById('cogs-pct-container'),
     fixed_opex: document.getElementById('fixed-opex-container'),
     capex: document.getElementById('capex-container'),
@@ -20,196 +23,634 @@ const granularContainers = {
 
 let revenueChart = null;
 let cashDebtChart = null;
-let revenueStreams = []; 
-let cogsStreams = []; 
-let opexStreams = []; 
-let currentYears = 5;
+let revenueStreams = []; // Store stream metadata
 
-// --- INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', () => { updateGranularInputs(); });
+// --- REVENUE BUILDER LOGIC ---
+
+document.getElementById('addStreamBtn').addEventListener('click', () => {
+    const name = document.getElementById('new_stream_name').value || 'Stream ' + (revenueStreams.length + 1);
+    const type = document.getElementById('new_stream_type').value;
+    const price = parseFloat(document.getElementById('new_stream_price').value) || 0;
+    const qty = parseFloat(document.getElementById('new_stream_qty').value) || 0;
+    const growth = parseFloat(document.getElementById('new_stream_growth').value) || 0;
+
+    const id = Date.now();
+    const years = parseInt(forecastYearsInput.value);
+    const months = years * 12;
+
+    const streamObj = { id, name, type, price, qty, growth, months };
+    revenueStreams.push(streamObj);
+    renderStream(streamObj);
+    updateTotalRevenuePreview();
+    refreshCogsBuilder();
+});
+
+function renderStream(stream) {
+    const container = document.getElementById('revenue-streams-list');
+    const div = document.createElement('div');
+    div.className = 'stream-card';
+    div.id = `stream-${stream.id}`;
+
+    // Calculate initial values based on drivers
+    // Logic: Base Revenue = Price * Qty. Grows annually by growth %.
+    const monthlyVals = [];
+    // We use the full annual growth rate now (e.g., 1.10 for 10% growth)
+    const annualGrowthFactor = 1 + (stream.growth / 100);
+    
+    // Starting Year 1 annual revenue
+    let currentYearlyRevenue = (stream.price * stream.qty); 
+
+    for(let i=0; i < stream.months; i++) {
+        // Every time we hit a new year (Month 13, 25, 37...), 
+        // we increase the annual bucket by the growth rate.
+        if (i > 0 && i % 12 === 0) {
+            currentYearlyRevenue = currentYearlyRevenue * annualGrowthFactor;
+        }
+
+        // The monthly box always shows the current annual bucket divided by 12
+        monthlyVals.push(currentYearlyRevenue / 12);
+    }
+
+    // Header
+    let html = `
+        <div class="stream-header">
+            <h4>${stream.name} <span style="font-weight:normal; font-size:0.8em">(${stream.type})</span></h4>
+            <div>
+                <button type="button" class="remove-stream-btn" onclick="removeStream(${stream.id})">Remove</button>
+            </div>
+        </div>
+        <div class="matrix-scroll-wrapper">
+    `;
+
+    // Matrix Cells (Limit to 60 months for UI performance, or match horizon)
+    for(let i=0; i < monthlyVals.length; i++) {
+        const val = monthlyVals[i].toFixed(2);
+        html += `
+            <div class="matrix-cell">
+                <label>M${i+1}</label>
+                <input type="number" class="stream-val-input" data-stream="${stream.id}" value="${val}" onchange="updateTotalRevenuePreview()">
+            </div>
+        `;
+    }
+    html += `</div>`;
+    div.innerHTML = html;
+    container.appendChild(div);
+}
+
+window.removeStream = function(id) {
+    revenueStreams = revenueStreams.filter(s => s.id !== id);
+    document.getElementById(`stream-${id}`).remove();
+    updateTotalRevenuePreview();
+    refreshCogsBuilder();
+}
+
+
+
+
+
+
+function updateTotalRevenuePreview() {
+    const years = parseInt(forecastYearsInput.value);
+    const container = document.getElementById('annual-revenue-list');
+    container.innerHTML = ''; // Clear existing previews
+
+    // Initialize an array to hold totals for each year [0, 0, 0, 0, 0]
+    let annualTotals = new Array(years).fill(0);
+
+    const cards = document.querySelectorAll('.stream-card');
+    
+    cards.forEach(card => {
+        const inputs = card.querySelectorAll('input.stream-val-input');
+        
+        inputs.forEach((input, index) => {
+            const yearIndex = Math.floor(index / 12); // Month 0-11 = Yr 0, 12-23 = Yr 1...
+            if (yearIndex < years) {
+                annualTotals[yearIndex] += parseFloat(input.value) || 0;
+            }
+        });
+    });
+
+    // Get currency symbol for the label
+    const currency = document.getElementById('currency_symbol').value;
+
+    // Create a small UI element for each year
+    annualTotals.forEach((total, i) => {
+        const yearDiv = document.createElement('div');
+        yearDiv.style.minWidth = "120px";
+        yearDiv.innerHTML = `
+            <strong style="display:block; font-size: 0.85em; color: #666;">Year ${i + 1}:</strong>
+            <span style="font-weight: bold; color: #333;">${currency}${total.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+        `;
+        container.appendChild(yearDiv);
+    });
+}
+
+
+
+
+
+
+let extraCogs = []; // Store non-stream related COGS
+
+function refreshCogsBuilder() {
+    const container = document.getElementById('stream-cogs-list');
+    container.innerHTML = '<h3>Stream-Linked Margins (%)</h3>';
+    const years = parseInt(forecastYearsInput.value);
+
+    // 1. Create rows for existing Revenue Streams
+    revenueStreams.forEach(stream => {
+        const div = document.createElement('div');
+        div.className = 'stream-card cogs-card';
+        div.innerHTML = `
+            <div class="stream-header">
+                <h4>${stream.name} - COGS Margin (%)</h4>
+            </div>
+            <div class="matrix-scroll-wrapper">
+                ${generateMatrixInputs(stream.id, 'stream-cogs', years, 40)} 
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    // 2. Add rows for "Extra" COGS
+    if(extraCogs.length > 0) {
+        container.innerHTML += '<h3>Additional Direct Costs</h3>';
+        extraCogs.forEach(cogs => {
+            const div = document.createElement('div');
+            div.className = 'stream-card cogs-card';
+            div.innerHTML = `
+                <div class="stream-header">
+                    <h4>${cogs.name}</h4>
+                    <button type="button" class="remove-stream-btn" onclick="removeExtraCogs(${cogs.id})">Remove</button>
+                </div>
+                <div class="matrix-scroll-wrapper">
+                    ${generateMatrixInputs(cogs.id, 'extra-cogs', years, cogs.defaultPct)}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+    updateTotalCogsPreview();
+}
+
+// Helper to generate the 60 or 120 input boxes
+function generateMatrixInputs(id, type, years, defVal) {
+    let html = '';
+    for(let i=0; i < years * 12; i++) {
+        // Add a data-unit attribute to help collectInputData know if it's % or $
+        const unit = type === 'stream-cogs' ? '%' : '$';
+        html += `
+            <div class="matrix-cell">
+                <label>M${i+1}</label>
+                <input type="number" 
+                       class="cogs-val-input" 
+                       data-parent="${id}" 
+                       data-type="${type}" 
+                       data-unit="${unit}" 
+                       value="${defVal}" 
+                       onchange="updateTotalCogsPreview()">
+            </div>
+        `;
+    }
+    return html;
+}
+
+
+
+
+
+function updateTotalCogsPreview() {
+    const years = parseInt(forecastYearsInput.value);
+    const container = document.getElementById('annual-cogs-list');
+    container.innerHTML = '';
+    let annualCogsTotals = new Array(years).fill(0);
+
+    // 1. Calculate Linked COGS (Revenue * COGS %)
+    const streamCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+    const cogsCards = document.querySelectorAll('.cogs-card');
+
+    streamCards.forEach((revCard, sIdx) => {
+        const revInputs = revCard.querySelectorAll('.stream-val-input');
+        const cogsInputs = cogsCards[sIdx]?.querySelectorAll('.cogs-val-input');
+        
+        revInputs.forEach((revInp, mIdx) => {
+            const margin = cogsInputs ? (parseFloat(cogsInputs[mIdx].value) / 100) : 0;
+            const cost = (parseFloat(revInp.value) || 0) * margin;
+            const yIdx = Math.floor(mIdx / 12);
+            if(yIdx < years) annualCogsTotals[yIdx] += cost;
+        });
+    });
+
+    // 2. Render the totals
+    const currency = document.getElementById('currency_symbol').value;
+    annualCogsTotals.forEach((total, i) => {
+        const div = document.createElement('div');
+        div.style.minWidth = "120px";
+        div.innerHTML = `<strong style="display:block; font-size:0.8em;">Year ${i+1}:</strong>
+                         <span style="font-weight:bold;">${currency}${total.toLocaleString(undefined, {maximumFractionDigits:0})}</span>`;
+        container.appendChild(div);
+    });
+}
+
+
+
+
+
+
+
+// --- CORE TABS & UTILS ---
+
+function openTab(evt, tabName) {
+    const tabContents = document.getElementsByClassName("tab-content");
+    for (let i = 0; i < tabContents.length; i++) tabContents[i].style.display = "none";
+    const tabLinks = document.getElementsByClassName("tab-link");
+    for (let i = 0; i < tabLinks.length; i++) tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+window.openTab = openTab;
+
+function createVerticalInputs(container, idPrefix, labelBase, count, defaultValueId, step, unit) {
+    if (!container) return;
+    container.innerHTML = ''; 
+    const wrapper = document.createElement('div');
+    wrapper.className = 'granular-input-row';
+    const defaultElement = document.getElementById(defaultValueId);
+    let defaultVal = defaultElement ? parseFloat(defaultElement.value) : 0; 
+    
+    for (let i = 1; i <= count; i++) {
+        const inputDiv = document.createElement('div');
+        inputDiv.className = 'granular-year-input';
+        let labelText = `Y${i}${unit.replace(/[\(\)]/g, '')}:`;
+        inputDiv.innerHTML = `
+            <label for="${idPrefix}_y${i}">${labelText}</label>
+            <input type="number" id="${idPrefix}_y${i}" value="${defaultVal}" step="${step}" required>
+        `;
+        wrapper.appendChild(inputDiv);
+    }
+    const header = document.createElement('p');
+    header.className = 'granular-row-label';
+    header.textContent = labelBase;
+    container.appendChild(header);
+    container.appendChild(wrapper);
+}
+
+function createAllGranularInputs(numYears) {
+    // Note: removed revenue_growth inputs as they are now handled by streams or fallback
+    createVerticalInputs(granularContainers.cogs_pct, 'cogs_pct', 'COGS %', numYears, 'default_cogs_pct', '0.1', '(%)');
+    createVerticalInputs(granularContainers.fixed_opex, 'fixed_opex', 'Fixed Opex', numYears, 'default_fixed_opex', '0.01', '');
+    createVerticalInputs(granularContainers.capex, 'capex', 'CapEx', numYears, 'default_capex', '0.01', '');
+    createVerticalInputs(granularContainers.dso_days, 'dso_days', 'DSO', numYears, 'default_dso_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.dio_days, 'dio_days', 'DIO', numYears, 'default_dio_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.dpo_days, 'dpo_days', 'DPO', numYears, 'default_dpo_days', '1', '(Days)');
+    createVerticalInputs(granularContainers.debt_repayment, 'debt_repayment', 'Debt Repay', numYears, 'default_annual_debt_repayment', '0.01', '');
+}
 
 annualButtons.forEach(btn => {
     btn.addEventListener('click', () => {
+        // --- NEW: Save current data before switching ---
+        const currentData = collectInputData(); 
+
         annualButtons.forEach(b => b.classList.remove('selected-year-btn'));
         btn.classList.add('selected-year-btn');
-        currentYears = parseInt(btn.dataset.value);
-        updateGranularInputs();
-        refreshAllBuilders();
+        const years = parseInt(btn.getAttribute('data-value'));
+        forecastYearsInput.value = years;
+
+        // Redraw the inputs
+        createAllGranularInputs(years);
+
+        
+
+  // 4. Update the Revenue Stream matrices to match the new duration (5 or 10 years)
+        const streamContainer = document.getElementById('revenue-streams-list');
+        streamContainer.innerHTML = ''; // Clear the current list from the screen
+        
+        revenueStreams.forEach(stream => {
+            stream.months = years * 12; // Update the month count for the stream
+            renderStream(stream);       // Re-draw the stream (matrix will now have 60 or 120 boxes)
+        });
+
+        // 5. Restore the values and update the totals at the bottom
+        setTimeout(() => {
+            reApplySavedData(currentData); // Puts your numbers back into the boxes
+            updateTotalRevenuePreview();   // Calculates and shows Year 1, 2, 3... Year 10
+            refreshCogsBuilder(); // --- ADD THIS LINE ---
+        }, 50); 
     });
 });
 
-function refreshAllBuilders() {
-    refreshRevenueBuilder();
-    refreshCogsBuilder();
-    refreshOpExBuilder();
-}
 
-function updateGranularInputs() {
-    for (const key in granularContainers) {
-        const container = granularContainers[key];
-        const currentVals = Array.from(container.querySelectorAll('input')).map(i => i.value);
-        container.innerHTML = '';
-        for (let i = 1; i <= currentYears; i++) {
-            const val = currentVals[i-1] || '0';
-            container.innerHTML += `<div class="granular-item"><span>Y${i}</span><input type="number" step="any" name="${key}_rates" value="${val}"></div>`;
+
+
+
+monthlyDetailSelect.addEventListener('change', (e) => {
+    monthlyDetailInput.value = e.target.value;
+});
+
+const defaults = ['default_cogs_pct', 'default_fixed_opex', 'default_capex', 'default_dso_days', 'default_dio_days', 'default_dpo_days', 'default_annual_debt_repayment'];
+defaults.forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+        createAllGranularInputs(parseInt(forecastYearsInput.value));
+    });
+});
+
+document.querySelector('.right-pane').addEventListener('click', (e) => {
+    let header = e.target.closest('.collapsible-header');
+    if (header) {
+        const targetId = header.getAttribute('data-target');
+        header.classList.toggle('collapsed');
+        document.getElementById(targetId).classList.toggle('expanded-content');
+    }
+});
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleForecastRequest(API_URL);
+});
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    await handleForecastRequest(EXPORT_API_URL, true);
+});
+
+async function handleForecastRequest(url, isExport = false) {
+    errorMessage.textContent = isExport ? 'Generating Excel...' : '';
+    try {
+        const data = collectInputData();
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || response.statusText);
         }
+        if (isExport) {
+            await handleFileDownload(response);
+        } else {
+            const result = await response.json();
+            renderResults(result, document.getElementById('currency_symbol').value);
+        }
+    } catch (error) {
+        errorMessage.textContent = `Error: ${error.message}`;
     }
 }
 
-// --- BUILDER LOGIC ---
-function addStream(type) {
-    let name, val, values;
-    if (type === 'revenue') {
-        name = document.getElementById('new_stream_name').value || 'Revenue Stream';
-        const units = parseFloat(document.getElementById('new_stream_units').value) || 0;
-        const price = parseFloat(document.getElementById('new_stream_price').value) || 0;
-        val = units * price;
-        values = new Array(currentYears * 12).fill(val);
-        revenueStreams.push({ id: Date.now(), name, values });
-        refreshRevenueBuilder();
-    } else if (type === 'cogs') {
-        name = document.getElementById('new_cogs_name').value || 'Direct Cost';
-        val = parseFloat(document.getElementById('new_cogs_val').value) || 0;
-        values = new Array(currentYears * 12).fill(val);
-        cogsStreams.push({ id: Date.now(), name, values });
-        refreshCogsBuilder();
-    } else {
-        name = document.getElementById('new_opex_name').value || 'OpEx Line';
-        val = parseFloat(document.getElementById('new_opex_val').value) || 0;
-        values = new Array(currentYears * 12).fill(val);
-        opexStreams.push({ id: Date.now(), name, values });
-        refreshOpExBuilder();
+function collectInputData() {
+    const years = parseInt(forecastYearsInput.value, 10);
+    const collectList = (keyPrefix, isPct, defaultId) => {
+        const list = [];
+        const factor = isPct ? 100 : 1;
+        const defVal = parseFloat(document.getElementById(defaultId).value);
+        for (let i = 1; i <= years; i++) {
+            const el = document.getElementById(`${keyPrefix}_y${i}`);
+            const val = el ? parseFloat(el.value) : defVal;
+            list.push((isNaN(val) ? defVal : val) / factor);
+        }
+        return list;
+    };
+
+    // Collect Revenue Streams Manual Overrides
+    const collectedStreams = [];
+    const streamCards = document.querySelectorAll('.stream-card');
+    streamCards.forEach(card => {
+        const inputs = card.querySelectorAll('input.stream-val-input');
+        const values = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+        const name = card.querySelector('h4').textContent;
+        collectedStreams.push({ name: name, values: values });
+    });
+
+
+const collectedCogs = [];
+    const cogsCards = document.querySelectorAll('.cogs-card');
+    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+
+    cogsCards.forEach((card, cardIdx) => {
+        const name = card.querySelector('h4').textContent;
+        const marginInputs = card.querySelectorAll('.cogs-val-input');
+        
+        // Find the matching revenue inputs to calculate $ cost
+        const matchingRevInputs = revCards[cardIdx]?.querySelectorAll('.stream-val-input');
+
+        const dollarValues = Array.from(marginInputs).map((marginInp, mIdx) => {
+            const marginPct = (parseFloat(marginInp.value) || 0) / 100;
+            const revVal = matchingRevInputs ? (parseFloat(matchingRevInputs[mIdx].value) || 0) : 0;
+            
+            // Return the actual $ cost for this month
+            return revVal * marginPct; 
+        });
+
+        collectedCogs.push({ name: name, values: dollarValues });
+    });
+
+    return {
+        revenue_streams: collectedStreams, // NEW PAYLOAD
+
+        cogs_streams: collectedCogs, // SEND THIS TO PYTHON
+        
+        tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
+        initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
+        depreciation_rate: parseFloat(document.getElementById('depreciation_rate').value) / 100,
+        initial_debt: parseFloat(document.getElementById('initial_debt').value),
+        initial_cash: parseFloat(document.getElementById('initial_cash').value),
+        interest_rate: parseFloat(document.getElementById('interest_rate').value) / 100,
+        years: years,
+        monthly_detail: parseInt(monthlyDetailInput.value),
+        
+        cogs_pct_rates: collectList('cogs_pct', true, 'default_cogs_pct'),
+        fixed_opex_rates: collectList('fixed_opex', false, 'default_fixed_opex'),
+        capex_rates: collectList('capex', false, 'default_capex'),
+        dso_days_list: collectList('dso_days', false, 'default_dso_days'),
+        dio_days_list: collectList('dio_days', false, 'default_dio_days'),
+        dpo_days_list: collectList('dpo_days', false, 'default_dpo_days'),
+        annual_debt_repayment_list: collectList('debt_repayment', false, 'default_annual_debt_repayment'),
+    };
+}
+
+async function handleFileDownload(response) {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Financial_Forecast.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    errorMessage.textContent = '';
+}
+
+function renderResults(data, currency) {
+    const isBody = document.querySelector('#incomeStatementTable tbody');
+    const bsBody = document.querySelector('#balanceSheetTable tbody');
+    const cfBody = document.querySelector('#cashFlowTable tbody');
+    const isHead = document.querySelector('#incomeStatementTable thead');
+    const bsHead = document.querySelector('#balanceSheetTable thead');
+    const cfHead = document.querySelector('#cashFlowTable thead');
+
+    [isBody, bsBody, cfBody, isHead, bsHead, cfHead].forEach(el => el.innerHTML = '');
+
+    const format = (v) => `${v < 0 ? '-' : ''}${currency}${Math.abs(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    
+    const bsCols = data["Display_Labels"];
+    const isCols = data["Display_Labels"].slice(1);
+
+    const createHeader = (thead, cols) => {
+        const row = thead.insertRow();
+        row.insertCell().textContent = 'Line Item';
+        cols.forEach(c => { row.insertCell().textContent = c; });
+    };
+
+    createHeader(isHead, isCols);
+    createHeader(bsHead, bsCols);
+    createHeader(cfHead, isCols);
+
+    const insertRow = (body, label, rowData, isBold=false) => {
+        const row = body.insertRow();
+        if (isBold) row.className = 'heavy-total-row';
+        row.insertCell().textContent = label;
+        rowData.forEach(val => {
+            const cell = row.insertCell();
+            cell.textContent = format(val);
+            cell.className = 'data-cell';
+        });
+    };
+
+    // Mapping keys from display_data
+    const d = data["display_data"];
+    
+    // Inject Stream Rows if they exist in display_data (We need to check app.py response)
+    if (d["Stream_Rows"]) {
+        d["Stream_Rows"].forEach(stream => {
+            // --- ADD THIS FILTER ---
+        // If the stream name contains "COGS", don't put it in the Revenue section
+        if (stream.name.includes("COGS")) {
+            return; 
+        }
+        insertRow(isBody, stream.name, stream.values, false);
+    });
+}
+
+
+    insertRow(isBody, "Total Revenue", d["Revenue"], true);
+    insertRow(isBody, "COGS", d["COGS"]);
+    insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
+    insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
+    insertRow(isBody, "Depreciation", d["Depreciation"]);
+    insertRow(isBody, "EBIT", d["EBIT"], true);
+    insertRow(isBody, "Interest", d["Interest"]);
+    insertRow(isBody, "Taxes", d["Taxes"]);
+    insertRow(isBody, "Net Income", d["Net Income"], true);
+
+    insertRow(bsBody, "Cash", d["Cash"]);
+    insertRow(bsBody, "Accounts Receivable", d["AR"]);
+    insertRow(bsBody, "Inventory", d["Inventory"]);
+    insertRow(bsBody, "Net PP&E", d["PPE"]);
+    insertRow(bsBody, "Total Assets", d["Total Assets"], true);
+    insertRow(bsBody, "Accounts Payable", d["AP"]);
+    insertRow(bsBody, "Debt", d["Debt"]);
+    insertRow(bsBody, "Retained Earnings", d["RE"]);
+    insertRow(bsBody, "Total Liab & Eq", d["Total LiabEq"], true);
+
+    insertRow(cfBody, "Net Income", d["CF_NI"]);
+    insertRow(cfBody, "Add: Depreciation", d["CF_Dep"]);
+    insertRow(cfBody, "Less: Change in NWC", d["CF_NWC"]);
+    insertRow(cfBody, "Cash Flow Operations", d["CFO"], true);
+    insertRow(cfBody, "Cash Flow Investing", d["CFI"], true);
+    insertRow(cfBody, "Cash Flow Financing", d["CFF"], true);
+    insertRow(cfBody, "Net Change in Cash", d["Net Cash Change"], true);
+
+    renderCharts(data);
+    resultsContainer.style.display = 'block';
+    document.querySelector('.tab-link').click();
+}
+
+function renderCharts(data) {
+    const labels = data["Display_Labels"].slice(1);
+    const d = data["display_data"];
+    
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(document.getElementById('revenueKpiChart'), {
+        type: 'bar',
+        data: { labels: labels, datasets: [
+            { label: 'Revenue', data: d["Revenue"], backgroundColor: '#36a2eb' },
+            { label: 'Net Income', data: d["Net Income"], backgroundColor: '#4bc0c0' }
+        ]},
+        options: { responsive: true, plugins: { title: { display: true, text: 'Profitability' } } }
+    });
+
+    if (cashDebtChart) cashDebtChart.destroy();
+    cashDebtChart = new Chart(document.getElementById('cashDebtChart'), {
+        type: 'line',
+        data: { labels: labels, datasets: [
+            { label: 'Cash Balance', data: d["Cash"].slice(1), borderColor: '#ff9f40', fill: true }
+        ]},
+        options: { responsive: true, plugins: { title: { display: true, text: 'Cash Position' } } }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => { 
+    const defaultYears = 5; 
+    forecastYearsInput.value = defaultYears;
+    createAllGranularInputs(defaultYears); 
+    const defaultBtn = document.querySelector(`.year-select-btn[data-value="${defaultYears}"]`);
+    if (defaultBtn) defaultBtn.classList.add('active', 'selected-year-btn');
+});
+
+
+function reApplySavedData(data) {
+    // This loops through the saved data and puts it back into the boxes
+    Object.keys(granularContainers).forEach(key => {
+        const savedList = data[key + '_rates'] || data[key + '_list'];
+        if (savedList) {
+            savedList.forEach((val, index) => {
+                const input = document.getElementById(`${key}_y${index + 1}`);
+                if (input) {
+                    // Convert back to whole numbers for percentages (e.g., 0.4 to 40)
+                    const isPct = key.includes('pct') || key.includes('rate');
+                    input.value = isPct ? (val * 100).toFixed(1) : val;
+                }
+            });
+        }
+    });
+
+    // B. Restore Revenue Stream box values
+    if (data.revenue_streams) {
+        const streamCards = document.querySelectorAll('.stream-card');
+        data.revenue_streams.forEach((savedStream, sIndex) => {
+            // Check if the stream card exists on the screen
+            if (streamCards[sIndex]) {
+                const inputs = streamCards[sIndex].querySelectorAll('input.stream-val-input');
+                savedStream.values.forEach((val, vIndex) => {
+                    // Put the value back if the box exists (e.g., first 60 months)
+                    if (inputs[vIndex]) {
+                        inputs[vIndex].value = val.toFixed(2);
+                    }
+                });
+            }
+        });
     }
 }
 
-document.getElementById('addStreamBtn').onclick = () => addStream('revenue');
-document.getElementById('addExtraCogsBtn').onclick = () => addStream('cogs');
-document.getElementById('addOpExBtn').onclick = () => addStream('opex');
-
-function renderStreamContainer(containerId, streams, type, removeFnName, updateTotalsFn) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    streams.forEach(stream => {
-        let matrixHtml = '';
-        for (let m = 0; m < 12; m++) {
-            matrixHtml += `<div class="matrix-cell"><label>M${m+1}</label><input type="number" class="matrix-val-input" data-type="${type}" data-stream-id="${stream.id}" data-month="${m}" value="${stream.values[m]}"></div>`;
-        }
-        container.innerHTML += `
-            <div class="stream-card ${type}-card">
-                <div class="stream-header"><h4>${stream.name}</h4><button type="button" class="remove-btn" onclick="${removeFnName}(${stream.id})">Remove</button></div>
-                <div class="matrix-grid">${matrixHtml}</div>
-            </div>`;
+document.getElementById('addExtraCogsBtn').addEventListener('click', () => {
+    const name = document.getElementById('new_cogs_name').value || 'Extra COGS';
+    const pct = parseFloat(document.getElementById('new_cogs_pct').value) || 0;
+    
+    extraCogs.push({
+        id: Date.now(),
+        name: name,
+        defaultPct: pct
     });
     
-    container.querySelectorAll('.matrix-val-input').forEach(input => {
-        input.oninput = (e) => {
-            const sId = parseInt(e.target.dataset.streamId);
-            const m = parseInt(e.target.dataset.month);
-            const val = parseFloat(e.target.value) || 0;
-            const list = type === 'revenue' ? revenueStreams : (type === 'cogs' ? cogsStreams : opexStreams);
-            const s = list.find(x => x.id === sId);
-            if (s) { for (let i = m; i < s.values.length; i++) s.values[i] = val; updateTotalsFn(); }
-        };
-    });
-    updateTotalsFn();
-}
+    refreshCogsBuilder();
+    
+    // Clear inputs
+    document.getElementById('new_cogs_name').value = '';
+    document.getElementById('new_cogs_pct').value = '';
+});
 
-function refreshRevenueBuilder() { renderStreamContainer('revenue-streams-container', revenueStreams, 'revenue', 'removeRev', updateRevenueTotals); }
-function refreshCogsBuilder() { renderStreamContainer('cogs-streams-container', cogsStreams, 'cogs', 'removeCogs', updateCogsTotals); }
-function refreshOpExBuilder() { renderStreamContainer('opex-streams-container', opexStreams, 'opex', 'removeOpex', updateOpExTotals); }
-
-window.removeRev = (id) => { revenueStreams = revenueStreams.filter(s => s.id !== id); refreshRevenueBuilder(); };
-window.removeCogs = (id) => { cogsStreams = cogsStreams.filter(s => s.id !== id); refreshCogsBuilder(); };
-window.removeOpex = (id) => { opexStreams = opexStreams.filter(s => s.id !== id); refreshOpExBuilder(); };
-
-function updateRevenueTotals() { calculatePreview(revenueStreams, 'revenue-total-preview', 'Revenue'); }
-function updateCogsTotals() { calculatePreview(cogsStreams, 'cogs-total-preview', 'COGS'); }
-function updateOpExTotals() { calculatePreview(opexStreams, 'opex-total-preview', 'OpEx'); }
-
-function calculatePreview(streams, elId, label) {
-    const totals = new Array(currentYears).fill(0);
-    streams.forEach(s => { for (let y = 0; y < currentYears; y++) totals[y] += s.values.slice(y*12, (y+1)*12).reduce((a,b)=>a+b, 0); });
-    let html = `<strong>Annual ${label}:</strong> `;
-    totals.forEach((t, i) => html += `<span class="preview-tag">Y${i+1}: $${t.toLocaleString()}</span> `);
-    document.getElementById(elId).innerHTML = html;
-}
-
-// --- RESULTS RENDERING ---
-function renderResults(results) {
-    resultsContainer.style.display = 'block';
-    const labels = results.Display_Labels;
-    const d = results.display_data;
-
-    const buildTable = (tableId, rows) => {
-        const table = document.getElementById(tableId);
-        let head = `<tr><th>Financial Item</th>${labels.map(l => `<th>${l}</th>`).join('')}</tr>`;
-        let body = rows.map(r => `
-            <tr class="${r.isTotal ? 'total-row' : (r.isSub ? 'sub-item' : '')}">
-                <td>${r.name}</td>
-                ${r.values.map(v => `<td>${v.toLocaleString(undefined, {maximumFractionDigits:0})}</td>`).join('')}
-            </tr>`).join('');
-        table.querySelector('thead').innerHTML = head;
-        table.querySelector('tbody').innerHTML = body;
-    };
-
-    buildTable('incomeStatementTable', [
-        { name: 'Total Revenue', values: d.Revenue, isTotal: true },
-        ...d.Stream_Rows.filter(s => s.type === 'Revenue').map(s => ({ name: `&nbsp;&nbsp;${s.name}`, values: s.values, isSub: true })),
-        { name: 'Total COGS', values: d.COGS, isTotal: true },
-        ...d.Stream_Rows.filter(s => s.type === 'COGS').map(s => ({ name: `&nbsp;&nbsp;${s.name}`, values: s.values, isSub: true })),
-        { name: 'Gross Profit', values: d['Gross Profit'], isTotal: true },
-        { name: 'Operating Expenses', values: d['Fixed Opex'], isTotal: true },
-        ...d.Stream_Rows.filter(s => s.type === 'OpEx').map(s => ({ name: `&nbsp;&nbsp;${s.name}`, values: s.values, isSub: true })),
-        { name: 'EBIT', values: d.EBIT, isTotal: true },
-        { name: 'Net Income', values: d['Net Income'], isTotal: true }
-    ]);
-
-    buildTable('balanceSheetTable', [
-        { name: 'Cash', values: d.Cash },
-        { name: 'Accounts Receivable', values: d.AR },
-        { name: 'Inventory', values: d.Inventory },
-        { name: 'Net PP&E', values: d.PPE },
-        { name: 'Total Assets', values: d['Total Assets'], isTotal: true },
-        { name: 'Accounts Payable', values: d.AP },
-        { name: 'Long Term Debt', values: d.Debt },
-        { name: 'Retained Earnings', values: d.RE },
-        { name: 'Total Liabilities & Equity', values: d['Total LiabEq'], isTotal: true }
-    ]);
-
-    renderCharts(labels, d);
-}
-
-function renderCharts(labels, d) {
-    if (revenueChart) revenueChart.destroy();
-    const ctx = document.getElementById('revenueKpiChart').getContext('2d');
-    revenueChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: 'Revenue', data: d.Revenue, borderColor: '#3b84f5' }, { label: 'Net Income', data: d['Net Income'], borderColor: '#10b981' }] }
-    });
-}
-
-form.onsubmit = async (e) => {
-    e.preventDefault();
-    const data = {
-        years: currentYears,
-        monthly_detail: parseInt(monthlyDetailSelect.value),
-        revenue_streams: revenueStreams,
-        cogs_streams: cogsStreams,
-        opex_streams: opexStreams
-    };
-    new FormData(form).forEach((v, k) => {
-        if (k.endsWith('_rates')) {
-            const ck = k.replace('_rates', '');
-            if (!data[ck]) data[ck] = [];
-            data[ck].push(parseFloat(v) || 0);
-        } else data[k] = v;
-    });
-    const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    renderResults(await resp.json());
-};
-
-window.openTab = (e, n) => {
-    document.querySelectorAll(".tab-content, .tab-btn").forEach(x => x.classList.remove("active"));
-    document.getElementById(n).classList.add("active");
-    e.currentTarget.classList.add("active");
+// Also add the remover for extra cogs
+window.removeExtraCogs = function(id) {
+    extraCogs = extraCogs.filter(c => c.id !== id);
+    refreshCogsBuilder();
 };
