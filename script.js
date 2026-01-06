@@ -225,23 +225,32 @@ function updateTotalCogsPreview() {
     container.innerHTML = '';
     let annualCogsTotals = new Array(years).fill(0);
 
-    // 1. Calculate Linked COGS (Revenue * COGS %)
     const streamCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
-    const cogsCards = document.querySelectorAll('.cogs-card');
-
-    streamCards.forEach((revCard, sIdx) => {
-        const revInputs = revCard.querySelectorAll('.stream-val-input');
-        const cogsInputs = cogsCards[sIdx]?.querySelectorAll('.cogs-val-input');
+    const allCogsInputs = document.querySelectorAll('.cogs-val-input');
+    
+    allCogsInputs.forEach((inp) => {
+        const type = inp.dataset.type;
+        const parentId = inp.dataset.parent;
+        // Find which month this input represents by its position in the row
+        const mIdx = Array.from(inp.parentNode.parentNode.children).indexOf(inp.parentNode);
+        const yIdx = Math.floor(mIdx / 12);
         
-        revInputs.forEach((revInp, mIdx) => {
-            const margin = cogsInputs ? (parseFloat(cogsInputs[mIdx].value) / 100) : 0;
-            const cost = (parseFloat(revInp.value) || 0) * margin;
-            const yIdx = Math.floor(mIdx / 12);
-            if(yIdx < years) annualCogsTotals[yIdx] += cost;
-        });
+        if (yIdx < years) {
+            if (type === 'stream-cogs') {
+                // Find the revenue stream that matches this COGS margin
+                const revIdx = revenueStreams.findIndex(s => s.id == parentId);
+                if (revIdx !== -1) {
+                    const revInp = streamCards[revIdx].querySelectorAll('.stream-val-input')[mIdx];
+                    const cost = (parseFloat(revInp.value) || 0) * (parseFloat(inp.value) / 100);
+                    annualCogsTotals[yIdx] += cost;
+                }
+            } else if (type === 'extra-cogs') {
+                // This is a direct dollar amount from "Additional Direct Costs"
+                annualCogsTotals[yIdx] += (parseFloat(inp.value) || 0);
+            }
+        }
     });
 
-    // 2. Render the totals
     const currency = document.getElementById('currency_symbol').value;
     annualCogsTotals.forEach((total, i) => {
         const div = document.createElement('div');
@@ -425,19 +434,24 @@ const collectedCogs = [];
     const cogsCards = document.querySelectorAll('.cogs-card');
     const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
 
-    cogsCards.forEach((card, cardIdx) => {
+    cogsCards.forEach((card) => {
         const name = card.querySelector('h4').textContent;
         const marginInputs = card.querySelectorAll('.cogs-val-input');
         
-        // Find the matching revenue inputs to calculate $ cost
-        const matchingRevInputs = revCards[cardIdx]?.querySelectorAll('.stream-val-input');
-
         const dollarValues = Array.from(marginInputs).map((marginInp, mIdx) => {
-            const marginPct = (parseFloat(marginInp.value) || 0) / 100;
-            const revVal = matchingRevInputs ? (parseFloat(matchingRevInputs[mIdx].value) || 0) : 0;
+            const val = parseFloat(marginInp.value) || 0;
             
-            // Return the actual $ cost for this month
-            return revVal * marginPct; 
+            if (marginInp.dataset.type === 'stream-cogs') {
+                // Linked Margin: Find the Revenue card for this specific stream
+                const parentStreamId = marginInp.dataset.parent;
+                const streamIdx = revenueStreams.findIndex(s => s.id == parentStreamId);
+                const matchingRevInp = revCards[streamIdx]?.querySelectorAll('.stream-val-input')[mIdx];
+                const revVal = matchingRevInp ? (parseFloat(matchingRevInp.value) || 0) : 0;
+                return revVal * (val / 100);
+            } else {
+                // Extra Cost: The input is already a direct dollar amount
+                return val;
+            }
         });
 
         collectedCogs.push({ name: name, values: dollarValues });
