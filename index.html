@@ -79,36 +79,49 @@
                     <button type="button" id="addStreamBtn" class="add-btn">+ Add Stream</button>
                 </div>
 
-                <div id="revenue-streams-list" class="revenue-streams-list">
-                    </div>
+                <div id="revenue-streams-list" class="revenue-streams-list"></div>
                 
-<div id="revenue-previews-container" style="margin-top: 15px; padding: 10px; background: #f0f7ff; border-radius: 6px;">
-    <h4 style="margin-top: 0; color: #3b84f5;">Annual Revenue Previews (Estimated):</h4>
-    <div id="annual-revenue-list" style="display: flex; flex-wrap: wrap; gap: 20px;">
-        </div>
-</div>
+                <div id="revenue-previews-container" style="margin-top: 15px; padding: 10px; background: #f0f7ff; border-radius: 6px;">
+                    <h4 style="margin-top: 0; color: #3b84f5;">Annual Revenue Previews (Estimated):</h4>
+                    <div id="annual-revenue-list" style="display: flex; flex-wrap: wrap; gap: 20px;"></div>
+                </div>
             </div>
 
-<div class="cogs-builder-container" style="margin-top: 30px; border-top: 2px solid #eee; pt-20px;">
-    <h2>COGS Builder (Direct Costs)</h2>
-    <p>Define cost margins for your streams or add independent direct costs.</p>
+            <div class="cogs-builder-container">
+                <h2>COGS Builder (Direct Costs)</h2>
+                <p>Define cost margins for your streams or add independent direct costs.</p>
 
-    <div id="stream-cogs-list"></div>
+                <div id="stream-cogs-list"></div>
 
-    <div class="add-stream-ui" style="background: #fff9f9; border: 1px solid #ffdada;">
-        <input type="text" id="new_cogs_name" placeholder="Extra COGS Name (e.g. Hosting)">
-        <input type="number" id="new_cogs_pct" placeholder="Default %" step="0.1">
-        <button type="button" id="addExtraCogsBtn" class="add-btn" style="background-color: #d12a2a;">Add Extra COGS</button>
-    </div>
+                <div class="add-stream-ui" style="background: #fff9f9; border: 1px solid #ffdada;">
+                    <input type="text" id="new_cogs_name" placeholder="Extra COGS Name (e.g. Hosting)">
+                    <input type="number" id="new_cogs_pct" placeholder="Default %" step="0.1">
+                    <button type="button" id="addExtraCogsBtn" class="add-btn" style="background-color: #d12a2a;">Add Extra COGS</button>
+                </div>
 
-    <div id="cogs-previews-container" style="margin-top: 15px; padding: 10px; background: #fff1f1; border-radius: 6px;">
-        <h4 style="margin-top: 0; color: #d12a2a;">Annual COGS Totals (Estimated):</h4>
-        <div id="annual-cogs-list" style="display: flex; flex-wrap: wrap; gap: 20px;"></div>
-    </div>
-</div>
+                <div id="cogs-previews-container" style="margin-top: 15px; padding: 10px; background: #fff1f1; border-radius: 6px;">
+                    <h4 style="margin-top: 0; color: #d12a2a;">Annual COGS Totals (Estimated):</h4>
+                    <div id="annual-cogs-list" style="display: flex; flex-wrap: wrap; gap: 20px;"></div>
+                </div>
+            </div>
 
+            <div class="opex-builder-container">
+                <h2>OpEx Builder (Operating Expenses)</h2>
+                <p>Add granular operating expenses (Rent, Salaries, Marketing). These override or add to the Annual Fixed Opex below.</p>
+                
+                <div id="opex-streams-list"></div>
 
+                <div class="add-stream-ui" style="background: #fffcf5; border: 1px solid #ffeeba;">
+                    <input type="text" id="new_opex_name" placeholder="OpEx Name (e.g. Marketing)">
+                    <input type="number" id="new_opex_default" placeholder="Monthly Amount" step="100">
+                    <button type="button" id="addOpexBtn" class="add-btn" style="background-color: #f39c12;">Add OpEx Stream</button>
+                </div>
 
+                <div id="opex-previews-container" style="margin-top: 15px; padding: 10px; background: #fff8eb; border-radius: 6px;">
+                    <h4 style="margin-top: 0; color: #cf850f;">Annual OpEx Totals (Estimated):</h4>
+                    <div id="annual-opex-list" style="display: flex; flex-wrap: wrap; gap: 20px;"></div>
+                </div>
+            </div>
             
             <h2>Baseline & Assumptions</h2>
             
