@@ -346,17 +346,15 @@ thead th { background-color: #f0f0f0; color: #333; }
 .currency-group label {
     font-weight: bold;
     margin: 0;
-    flex-basis: auto; /* Reset from the 75% basis in left-pane */
+    flex-basis: auto; 
 }
 
-/* Ensure the currency select matches the Monthly Detail style */
 #currency_symbol.styled-select {
-    width: 110px; /* Specific width for the top row */
+    width: 110px; 
     padding: 8px;
-    text-align: left; /* Better for dropdown readability */
+    text-align: left; 
 }
 
-/* Remove or update the old flex-basis that was specific to the left-pane */
 .input-group select#currency_symbol {
     flex-basis: auto; 
 }
@@ -364,16 +362,15 @@ thead th { background-color: #f0f0f0; color: #333; }
 
 /* --- COGS Builder Specifics --- */
 .cogs-builder-container {
-    background-color: #fff9f9; /* Soft red background */
+    background-color: #fff9f9; 
     border: 1px solid #ffdada;
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 30px;
 }
 
-/* Custom styling for COGS matrix cards to differentiate from Revenue */
 .stream-card.cogs-card {
-    border-left: 5px solid #d12a2a; /* Red stripe for costs */
+    border-left: 5px solid #d12a2a; 
     background: #fff;
 }
 
@@ -381,7 +378,6 @@ thead th { background-color: #f0f0f0; color: #333; }
     color: #a31d1d;
 }
 
-/* Red theme for the COGS input boxes */
 .cogs-val-input {
     width: 70px;
     padding: 4px;
@@ -397,7 +393,52 @@ thead th { background-color: #f0f0f0; color: #333; }
     background-color: #fff;
 }
 
-/* Extra COGS Add Row */
+#annual-cogs-list strong {
+    color: #a31d1d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- OpEx Builder Specifics (Amber/Orange Theme) --- */
+.opex-builder-container {
+    background-color: #fffcf5;
+    border: 1px solid #ffeeba;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.stream-card.opex-card {
+    border-left: 5px solid #f39c12;
+    background: #fff;
+}
+
+.opex-card .stream-header h4 {
+    color: #cf850f;
+}
+
+.opex-val-input {
+    width: 70px;
+    padding: 4px;
+    font-size: 0.85em;
+    text-align: right;
+    border: 1px solid #fff5db;
+    background-color: #fffdf9;
+}
+
+.opex-val-input:focus {
+    border-color: #f39c12;
+    outline: none;
+    background-color: #fff;
+}
+
+#annual-opex-list strong {
+    color: #cf850f;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Add Row UI Generic */
 .add-stream-ui {
     display: flex;
     flex-wrap: wrap;
@@ -407,7 +448,7 @@ thead th { background-color: #f0f0f0; color: #333; }
     padding: 15px;
     background: white;
     border-radius: 6px;
-    border: 1px dashed #d12a2a;
+    border: 1px dashed #ccc;
 }
 
 .add-stream-ui input {
@@ -418,14 +459,7 @@ thead th { background-color: #f0f0f0; color: #333; }
     min-width: 150px;
 }
 
-/* Labels for the Years in the COGS Preview */
-#annual-cogs-list strong {
-    color: #a31d1d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Responsive fix for the Matrix Wrappers */
+/* Scrollbar styling */
 .matrix-scroll-wrapper {
     scrollbar-width: thin;
     scrollbar-color: #ccc transparent;
