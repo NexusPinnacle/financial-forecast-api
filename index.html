@@ -35,121 +35,185 @@
             <div class="currency-group">
                 <label for="currency_symbol">Currency:</label>
                 <select id="currency_symbol" class="styled-select">
-                    <option value="$" selected>USD ($)</option>
-                    <option value="€">EUR (€)</option>
-                    <option value="£">GBP (£)</option>
-                    <option value="¥">JPY (¥)</option>
+                    <option value="$">$ (USD)</option>
+                    <option value="£">£ (GBP)</option>
+                    <option value="€">€ (EUR)</option>
+                    <option value="¥">¥ (JPY)</option>
                 </select>
             </div>
         </div>
-        
+
         <form id="forecastForm">
-            <input type="hidden" id="forecast_years" value="5"> 
-            <input type="hidden" id="monthly_detail" value="0">
-
-            <h2>Revenue Streams (Granular Buildup)</h2>
-            <div class="revenue-builder-container">
-                <p>Define streams here to auto-calculate the Top Line.</p>
-                <div class="stream-form-row">
-                    <div class="stream-input-group"><label>Name</label><input type="text" id="new_stream_name" placeholder="Consulting"></div>
-                    <div class="stream-input-group">
-                        <label>Type</label>
-                        <select id="new_stream_type">
-                            <option value="unit">Unit Sales</option>
-                            <option value="recurring">Recurring</option>
-                            <option value="service">Billable Hours</option>
-                        </select>
+            <div class="section-container revenue-section">
+                <h2>1. Revenue Builder</h2>
+                <div id="revenue-streams-container">
                     </div>
-                    <div class="stream-input-group"><label>Price/Rate</label><input type="number" id="new_stream_price" placeholder="0.00"></div>
-                    <div class="stream-input-group"><label>Quantity</label><input type="number" id="new_stream_qty" placeholder="0"></div>
-                    <div class="stream-input-group"><label>Ann. Growth %</label><input type="number" id="new_stream_growth" value="5"></div>
-                    <button type="button" id="addStreamBtn" class="add-btn">+ Add Stream</button>
+                
+                <div class="add-stream-ui">
+                    <div class="input-group-inline">
+                        <label>Stream Name:</label>
+                        <input type="text" id="new_stream_name" placeholder="e.g. SaaS Subscriptions">
+                    </div>
+                    <div class="input-group-inline">
+                        <label>Units/Mo (Start):</label>
+                        <input type="number" id="new_stream_units" value="100">
+                    </div>
+                    <div class="input-group-inline">
+                        <label>Price per Unit:</label>
+                        <input type="number" id="new_stream_price" value="50">
+                    </div>
+                    <button type="button" id="addStreamBtn" class="secondary-btn">+ Add Revenue Stream</button>
                 </div>
-                <div id="revenue-streams-list" class="revenue-streams-list"></div>
-                <div id="revenue-previews-container" class="preview-box blue-preview">
-                    <h4>Annual Revenue Previews:</h4>
-                    <div id="annual-revenue-list" class="preview-grid"></div>
-                </div>
+
+                <div class="totals-preview" id="revenue-total-preview">
+                    </div>
             </div>
 
-            <div class="cogs-builder-container">
-                <h2>COGS Builder (Direct Costs)</h2>
-                <p>Define cost margins for streams or add independent direct costs.</p>
-                <div id="stream-cogs-list"></div>
-                <div class="add-stream-ui cogs-add-ui">
-                    <input type="text" id="new_cogs_name" placeholder="Extra COGS (e.g. Hosting)">
-                    <input type="number" id="new_cogs_pct" placeholder="Default %" step="0.1">
-                    <button type="button" id="addExtraCogsBtn" class="add-btn red-btn">Add Extra COGS</button>
+            <div class="section-container cogs-section">
+                <h2>2. COGS Builder (Direct Costs)</h2>
+                <div id="cogs-streams-container">
+                    </div>
+
+                <div class="add-stream-ui">
+                    <div class="input-group-inline">
+                        <label>Expense Name:</label>
+                        <input type="text" id="new_cogs_name" placeholder="e.g. Server Hosting">
+                    </div>
+                    <div class="input-group-inline">
+                        <label>Monthly Cost ($):</label>
+                        <input type="number" id="new_cogs_val" value="500">
+                    </div>
+                    <button type="button" id="addExtraCogsBtn" class="secondary-btn cogs-btn">+ Add Extra COGS</button>
                 </div>
-                <div id="cogs-previews-container" class="preview-box red-preview">
-                    <h4>Annual COGS Totals:</h4>
-                    <div id="annual-cogs-list" class="preview-grid"></div>
-                </div>
+
+                <div class="totals-preview" id="cogs-total-preview">
+                    </div>
             </div>
 
-            <div class="opex-builder-container">
-                <h2>OpEx Builder (Operating Expenses)</h2>
-                <p>Add granular operating expenses like Rent, Marketing, or Salaries.</p>
-                <div id="opex-streams-list"></div>
+            <div class="section-container opex-section">
+                <h2>3. OpEx Builder (Operating Expenses)</h2>
+                <div id="opex-streams-container">
+                    </div>
+
                 <div class="add-stream-ui opex-add-ui">
-                    <input type="text" id="new_opex_name" placeholder="Expense Name (e.g. Rent)">
-                    <input type="number" id="new_opex_base" placeholder="Monthly Amount" step="0.01">
-                    <button type="button" id="addOpexStreamBtn" class="add-btn orange-btn">Add OpEx Stream</button>
+                    <div class="input-group-inline">
+                        <label>Expense Name:</label>
+                        <input type="text" id="new_opex_name" placeholder="e.g. Marketing or Rent">
+                    </div>
+                    <div class="input-group-inline">
+                        <label>Monthly Cost ($):</label>
+                        <input type="number" id="new_opex_val" value="1000">
+                    </div>
+                    <button type="button" id="addOpExBtn" class="secondary-btn opex-btn">+ Add OpEx Stream</button>
                 </div>
-                <div id="opex-previews-container" class="preview-box orange-preview">
-                    <h4>Annual OpEx Totals:</h4>
-                    <div id="annual-opex-list" class="preview-grid"></div>
-                </div>
+
+                <div class="totals-preview" id="opex-total-preview">
+                    </div>
             </div>
-            
-            <h2>Baseline & Assumptions</h2>
-            <div class="input-layout">
-                <div class="left-pane">
-                    <h3>Core Assumptions</h3>
-                    <div class="input-group">
-                        <label for="default_cogs_pct">Default COGS %:</label>
-                        <input type="number" id="default_cogs_pct" value="40" step="0.1">
+
+            <div class="section-container">
+                <h2>4. Other Financial Assumptions</h2>
+                
+                <div class="form-grid">
+                    <div class="card">
+                        <h3>Growth & Margin Defaults</h3>
+                        <p class="instruction">Note: Streams above override these if present.</p>
+                        <div class="input-group">
+                            <label>Base Initial Annual Revenue ($):</label>
+                            <input type="number" name="initial_revenue" step="1000" value="0">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Revenue Growth (%):</label>
+                            <div id="revenue-growth-container" class="granular-inputs"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>COGS (% of Revenue):</label>
+                            <div id="cogs-pct-container" class="granular-inputs"></div>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="default_fixed_opex">Default Annual OpEx:</label>
-                        <input type="number" id="default_fixed_opex" value="100">
+
+                    <div class="card">
+                        <h3>Operating & Tax</h3>
+                        <div class="input-group">
+                            <label>Base Annual OpEx ($):</label>
+                            <div id="fixed-opex-container" class="granular-inputs"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>Corporate Tax Rate (%):</label>
+                            <input type="number" name="tax_rate" step="0.01" value="0.21">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="tax_rate">Tax Rate (%):</label>
-                        <input type="number" id="tax_rate" value="25" step="0.1">
+
+                    <div class="card">
+                        <h3>Assets & Capex</h3>
+                        <div class="input-group">
+                            <label>Initial PP&E ($):</label>
+                            <input type="number" name="initial_ppe" step="1000" value="50000">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual CapEx ($):</label>
+                            <div id="capex-container" class="granular-inputs"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Depreciation (%):</label>
+                            <input type="number" name="depreciation_rate" step="0.01" value="0.10">
+                        </div>
                     </div>
-                </div>
-                <div class="right-pane">
-                    <h3>Capital & Cash</h3>
-                    <div class="input-group">
-                        <label for="initial_cash">Starting Cash:</label>
-                        <input type="number" id="initial_cash" value="200">
+
+                    <div class="card">
+                        <h3>Working Capital (Days)</h3>
+                        <div class="input-group">
+                            <label>DSO (Receivables):</label>
+                            <div id="dso-days-container" class="granular-inputs"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>DIO (Inventory):</label>
+                            <div id="dio-days-container" class="granular-inputs"></div>
+                        </div>
+                        <div class="input-group">
+                            <label>DPO (Payables):</label>
+                            <div id="dpo-days-container" class="granular-inputs"></div>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="initial_debt">Starting Debt:</label>
-                        <input type="number" id="initial_debt" value="0">
-                    </div>
-                    <div class="input-group">
-                        <label for="interest_rate">Interest Rate (%):</label>
-                        <input type="number" id="interest_rate" value="5" step="0.1">
+
+                    <div class="card">
+                        <h3>Debt & Cash</h3>
+                        <div class="input-group">
+                            <label>Initial Cash Balance ($):</label>
+                            <input type="number" name="initial_cash" step="1000" value="100000">
+                        </div>
+                        <div class="input-group">
+                            <label>Initial Debt ($):</label>
+                            <input type="number" name="initial_debt" step="1000" value="0">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Interest Rate (%):</label>
+                            <input type="number" name="interest_rate" step="0.01" value="0.05">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Debt Repayment ($):</label>
+                            <div id="debt-repayment-container" class="granular-inputs"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" id="calculateBtn">Generate Financial Forecast</button>
+            <div class="sticky-actions">
+                <button type="submit" class="primary-btn">Generate Financial Model</button>
+            </div>
         </form>
 
-        <div id="error-message" style="color:red; margin-top:20px;"></div>
+        <div id="error-message" class="error" style="display:none;"></div>
 
-        <div id="results-container" style="display:none; margin-top:40px;">
-            <div class="tabs-header">
-                <button class="tab-link active" onclick="openTab(event, 'tab-income')">Income Statement</button>
-                <button class="tab-link" onclick="openTab(event, 'tab-balance')">Balance Sheet</button>
-                <button class="tab-link" onclick="openTab(event, 'tab-cashflow')">Cash Flow</button>
-                <button class="tab-link" onclick="openTab(event, 'tab-charts')">Visuals</button>
+        <div id="results-container" style="display:none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="openTab(event, 'tab-is')">Income Statement</button>
+                <button class="tab-btn" onclick="openTab(event, 'tab-balance')">Balance Sheet</button>
+                <button class="tab-btn" onclick="openTab(event, 'tab-cashflow')">Cash Flow</button>
+                <button class="tab-btn" onclick="openTab(event, 'tab-charts')">KPI Charts</button>
             </div>
 
-            <div id="tab-income" class="tab-content" style="display:block;">
+            <div id="tab-is" class="tab-content active">
                 <h2>Forecasted Income Statement</h2>
                 <div class="table-responsive">
                     <table id="incomeStatementTable"><thead></thead><tbody></tbody></table>
@@ -172,9 +236,9 @@
 
             <div id="tab-charts" class="tab-content">
                 <h2>Forecasted KPIs - Visual Trends</h2>
-                <div style="display: flex; flex-wrap: wrap; justify-content: space-around;">
-                    <div style="width: 48%; min-width: 350px;"><canvas id="revenueKpiChart"></canvas></div>
-                    <div style="width: 48%; min-width: 350px;"><canvas id="cashDebtChart"></canvas></div>
+                <div style="width: 100%; margin: 20px auto; display: flex; flex-wrap: wrap; justify-content: space-around;">
+                    <div style="width: 48%; min-width: 350px; margin-bottom: 20px;"><canvas id="revenueKpiChart"></canvas></div>
+                    <div style="width: 48%; min-width: 350px; margin-bottom: 20px;"><canvas id="cashDebtChart"></canvas></div>
                 </div>
             </div>
 
