@@ -34,15 +34,10 @@ def generate_forecast(
     m_int_rate = interest_rate / 12.0
 
     L = num_months + 1
-    revenue = [0.0] * L
-    cogs = [0.0] * L
-    opex_total = [0.0] * L
+    revenue, cogs, opex_total = [[0.0] * L for _ in range(3)]
+    revenue_display_data, cogs_display_data, opex_display_data = [], [], []
 
-    revenue_display_data = [] 
-    cogs_display_data = [] 
-    opex_display_data = []
-
-    # 1. Revenue
+    # 1. Revenue Setup
     if revenue_streams:
         for stream in revenue_streams:
             vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
@@ -52,7 +47,7 @@ def generate_forecast(
         revenue[0] = initial_revenue
         for i in range(1, L): revenue[i] = revenue[i-1] * (1 + rev_growth_monthly[i-1])
 
-    # 2. COGS
+    # 2. COGS Setup
     if cogs_streams:
         for stream in cogs_streams:
             vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
@@ -61,10 +56,10 @@ def generate_forecast(
     else:
         for i in range(1, L): cogs[i] = revenue[i] * cogs_pct_m[i-1]
 
-    # 3. OpEx
+    # 3. OpEx Setup
     for i in range(1, L): opex_total[i] = fixed_opex_monthly[i-1]
     if opex_streams:
-        opex_total = [0.0] * L 
+        opex_total = [0.0] * L
         for stream in opex_streams:
             vals = (stream.get('values', []) + [0.0]*num_months)[:num_months]
             for i in range(num_months): opex_total[i+1] += vals[i]
@@ -74,21 +69,16 @@ def generate_forecast(
     ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
     nwc, change_nwc = [[0.0]*L for _ in range(2)]
 
-    # --- YEAR 0 BALANCING LOGIC ---
+    # --- YEAR 0 BALANCING ---
     ppe[0] = initial_ppe
     debt[0] = initial_debt
     cash[0] = initial_cash
-    # Calculate AR/Inv/AP for Year 0 if initial revenue exists
     if revenue[0] > 0:
-        temp_cogs = revenue[0] * cogs_pct_m[0]
         ar[0] = (revenue[0] / days_in_period) * dso_m[0]
-        inv[0] = (temp_cogs / days_in_period) * dio_m[0]
-        ap[0] = (temp_cogs / days_in_period) * dpo_m[0]
+        inv[0] = (revenue[0] * cogs_pct_m[0] / days_in_period) * dio_m[0]
+        ap[0] = (revenue[0] * cogs_pct_m[0] / days_in_period) * dpo_m[0]
     
-    # THE KEY FIX: Retained Earnings is the plug to make Assets = Liabilities + Equity
-    # Assets = Cash + AR + Inv + PPE
-    # Liab & Eq = AP + Debt + RE
-    # Therefore: RE = (Cash + AR + Inv + PPE) - (AP + Debt)
+    # Mathematical Plug for Retained Earnings
     re[0] = (cash[0] + ar[0] + inv[0] + ppe[0]) - (ap[0] + debt[0])
     assets[0] = cash[0] + ar[0] + inv[0] + ppe[0]
     liab_eq[0] = ap[0] + debt[0] + re[0]
@@ -115,10 +105,7 @@ def generate_forecast(
         change_nwc[i] = nwc[i] - (nwc[i-1] if i > 0 else (ar[0]+inv[0]-ap[0]))
         
         cfo = ni[i] + dep[i] - change_nwc[i]
-        cfi = -capex_monthly[idx]
-        cff = -repayment
-        
-        cash[i] = cash[i-1] + cfo + cfi + cff
+        cash[i] = cash[i-1] + cfo - capex_monthly[idx] - repayment
         re[i] = re[i-1] + ni[i]
         assets[i] = cash[i] + ar[i] + inv[i] + ppe[i]
         liab_eq[i] = ap[i] + debt[i] + re[i]
