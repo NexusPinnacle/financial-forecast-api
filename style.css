@@ -1,3 +1,4 @@
+/* --- BASE STYLING (Restored from Original) --- */
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f7f6;
@@ -7,7 +8,7 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1100px; /* Restored original width */
     margin: 0 auto;
     background: #fff;
     padding: 30px;
@@ -21,20 +22,45 @@ h1, h2 {
     padding-bottom: 10px;
 }
 
+/* --- Settings Row (Restored from Original) --- */
+.settings-row {
+    display: flex;
+    justify-content: flex-start;
+    gap: 40px;
+    margin-bottom: 25px;
+    align-items: center;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.mode-group, .duration-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
 /* --- Section Containers --- */
 .section-container {
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     padding: 20px;
     border-radius: 8px;
-    background: #fafafa;
+    background: #fffdfd; /* Lighter background to match original */
     border: 1px solid #eee;
 }
 
+/* Specific Section Accents */
 .revenue-section { border-top: 5px solid #3b84f5; }
-.cogs-section { border-top: 5px solid #ef4444; }
-.opex-section { border-top: 5px solid #f59e0b; } /* Task 2: Amber/Orange */
+.cogs-section { 
+    border-top: 5px solid #ef4444; 
+    background-color: #fffafa; /* Light red tint for original feel */
+}
+.opex-section { 
+    border-top: 5px solid #f59e0b; 
+    background-color: #fffbf0; /* Light amber tint */
+}
 
-/* --- Builder UI Components --- */
+/* --- Builder UI (Matching Original Revenue Look) --- */
 .stream-card {
     background: white;
     border: 1px solid #ddd;
@@ -47,94 +73,56 @@ h1, h2 {
 .cogs-card { border-left: 5px solid #ef4444; }
 .opex-card { border-left: 5px solid #f59e0b; }
 
-.stream-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+.stream-header h4 {
+    margin: 0;
+    font-size: 1.1em;
 }
 
-.stream-header h4 { margin: 0; color: #333; }
-
-/* Matrix Input Grid */
 .matrix-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 10px;
+    display: flex; /* Switched from Grid to Flex for better wrapping like original */
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .matrix-cell {
-    display: flex;
-    flex-direction: column;
+    width: 70px; /* Exact width from original inputs */
 }
 
 .matrix-cell label {
-    font-size: 0.75rem;
-    color: #666;
-    margin-bottom: 2px;
+    font-size: 0.7em;
+    color: #888;
+    display: block;
+    text-align: center;
 }
 
 .matrix-cell input {
+    width: 100%;
     padding: 4px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 0.85rem;
+    font-size: 0.85em;
+    text-align: right;
+    border: 1px solid #eee;
+    background-color: #fcfcfc;
 }
 
-/* --- Buttons --- */
-.primary-btn {
-    background-color: #3b84f5;
-    color: white;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-}
-
-.secondary-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    color: white;
-}
-
-#addStreamBtn { background-color: #3b84f5; }
-#addExtraCogsBtn { background-color: #ef4444; }
-#addOpExBtn { background-color: #f59e0b; }
-
-.remove-btn {
-    background: #fee2e2;
-    color: #ef4444;
-    border: 1px solid #ef4444;
-    padding: 2px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-}
-
-/* --- Totals Preview --- */
-.totals-preview {
-    margin-top: 15px;
-    padding: 10px;
-    background: #fff;
+/* --- Add Stream UI (Restored Dashed Border Style) --- */
+.add-stream-ui {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 6px;
     border: 1px dashed #ccc;
-    border-radius: 4px;
-    font-size: 0.9rem;
 }
 
-.preview-tag {
-    display: inline-block;
-    background: #e5e7eb;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-right: 5px;
-    font-weight: bold;
-}
+.revenue-section .add-stream-ui { border-color: #3b84f5; }
+.cogs-section .add-stream-ui { border-color: #ef4444; }
+.opex-section .add-stream-ui { border-color: #f59e0b; }
 
-/* --- Results & Tables --- */
+/* --- Table & Results (Original Look) --- */
 .table-responsive {
     overflow-x: auto;
     margin-top: 20px;
@@ -143,58 +131,70 @@ h1, h2 {
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
 }
 
 th, td {
-    padding: 10px;
+    padding: 12px;
     text-align: right;
     border-bottom: 1px solid #eee;
 }
 
 th:first-child, td:first-child { text-align: left; }
 
-th { background-color: #f8fafc; color: #64748b; }
-
 .total-row {
     font-weight: bold;
-    background-color: #f1f5f9;
+    background-color: #f9f9f9;
 }
 
 .sub-item {
-    color: #666;
-    font-style: italic;
-    font-size: 0.85rem;
+    color: #777;
+    font-size: 0.9em;
+    padding-left: 25px !important; /* Indentation for streams */
 }
 
-/* --- Tabs --- */
+/* --- Buttons --- */
+.primary-btn {
+    background-color: #3b84f5;
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.year-select-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+}
+
+.selected-year-btn {
+    background-color: #3b84f5;
+    color: white;
+    border-color: #3b84f5;
+}
+
+/* --- KPI Charts Layout --- */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
 .tabs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #ddd;
+    gap: 5px;
+    margin-top: 20px;
+    border-bottom: 2px solid #3b84f5;
 }
 
 .tab-btn {
     padding: 10px 20px;
     border: none;
-    background: none;
+    background: #f1f1f1;
     cursor: pointer;
-    font-weight: bold;
-    color: #666;
 }
 
 .tab-btn.active {
-    color: #3b84f5;
-    border-bottom: 3px solid #3b84f5;
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-.sticky-actions {
-    position: sticky;
-    bottom: 20px;
-    text-align: center;
-    margin-top: 40px;
+    background: #3b84f5;
+    color: white;
 }
