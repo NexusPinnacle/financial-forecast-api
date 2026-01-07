@@ -407,32 +407,21 @@ async function handleForecastRequest(url, isExport = false) {
 
 function collectInputData() {
     const years = parseInt(forecastYearsInput.value, 10);
-    const collectList = (keyPrefix, isPct, defaultId) => {
-        const list = [];
-        const factor = isPct ? 100 : 1;
-        const defVal = parseFloat(document.getElementById(defaultId).value);
-        for (let i = 1; i <= years; i++) {
-            const el = document.getElementById(`${keyPrefix}_y${i}`);
-            const val = el ? parseFloat(el.value) : defVal;
-            list.push((isNaN(val) ? defVal : val) / factor);
-        }
-        return list;
-    };
-
-    // Collect Revenue Streams Manual Overrides
-    const collectedStreams = [];
-    const streamCards = document.querySelectorAll('.stream-card');
-    streamCards.forEach(card => {
+    
+    // --- Existing Revenue Stream Collection ---
+    const collectedRevenue = [];
+    // Only select cards that are NOT cogs-cards
+    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+    revCards.forEach(card => {
         const inputs = card.querySelectorAll('input.stream-val-input');
         const values = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
-        const name = card.querySelector('h4').textContent;
-        collectedStreams.push({ name: name, values: values });
+        const name = card.querySelector('h4').textContent.split(' (')[0]; // Clean name
+        collectedRevenue.push({ name: name, values: values });
     });
 
-
-const collectedCogs = [];
+    // --- Existing COGS Stream Collection ---
+    const collectedCogs = [];
     const cogsCards = document.querySelectorAll('.cogs-card');
-    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
 
     cogsCards.forEach((card) => {
         const name = card.querySelector('h4').textContent;
@@ -442,25 +431,36 @@ const collectedCogs = [];
             const val = parseFloat(marginInp.value) || 0;
             
             if (marginInp.dataset.type === 'stream-cogs') {
-                // Linked Margin: Find the Revenue card for this specific stream
                 const parentStreamId = marginInp.dataset.parent;
                 const streamIdx = revenueStreams.findIndex(s => s.id == parentStreamId);
+                // Match with the specific revenue input for this month
                 const matchingRevInp = revCards[streamIdx]?.querySelectorAll('.stream-val-input')[mIdx];
                 const revVal = matchingRevInp ? (parseFloat(matchingRevInp.value) || 0) : 0;
                 return revVal * (val / 100);
             } else {
-                // Extra Cost: The input is already a direct dollar amount
-                return val;
+                return val; // Direct dollar amount
             }
         });
-
         collectedCogs.push({ name: name, values: dollarValues });
     });
 
-    return {
-        revenue_streams: collectedStreams, // NEW PAYLOAD
+    // --- Standard Inputs Collection ---
+    const collectList = (keyPrefix, isPct, defaultId) => {
+        const list = [];
+        const factor = isPct ? 100 : 1;
+        const defElement = document.getElementById(defaultId);
+        const defVal = defElement ? parseFloat(defElement.value) : 0;
+        for (let i = 1; i <= years; i++) {
+            const el = document.getElementById(`${keyPrefix}_y${i}`);
+            const val = el ? parseFloat(el.value) : defVal;
+            list.push((isNaN(val) ? defVal : val) / factor);
+        }
+        return list;
+    };
 
-        cogs_streams: collectedCogs, // SEND THIS TO PYTHON
+    return {
+        revenue_streams: collectedRevenue, 
+        cogs_streams: collectedCogs, // Separated properly
         
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
