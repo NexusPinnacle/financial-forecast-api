@@ -154,7 +154,7 @@ let extraCogs = []; // Store non-stream related COGS
 
 function refreshCogsBuilder() {
     const container = document.getElementById('stream-cogs-list');
-    container.innerHTML = '<h3>Stream-Linked Margins (%)</h3>';
+    container.innerHTML = '<h3>Stream-Linked Margins (as % of stream revenue)</h3>';
     const years = parseInt(forecastYearsInput.value);
 
     // 1. Create rows for existing Revenue Streams
@@ -163,7 +163,7 @@ function refreshCogsBuilder() {
         div.className = 'stream-card cogs-card';
         div.innerHTML = `
             <div class="stream-header">
-                <h4>${stream.name} - COGS Margin (%)</h4>
+                <h4>${stream.name} - COGS</h4>
             </div>
             <div class="matrix-scroll-wrapper">
                 ${generateMatrixInputs(stream.id, 'stream-cogs', years, 40)} 
