@@ -203,7 +203,7 @@ def generate_forecast(
         agg = get_display_val(s['raw_values'], True)
         final_stream_rows.append({
             'name': s['name'],
-            'type': s['type'], # ENSURE TYPE IS PASSED TO JS
+            'type': s['type', 'revenue'], # ENSURE TYPE IS PASSED TO JS
             'values': agg[1:] # Drop 'Start'
         })
 
