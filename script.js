@@ -536,18 +536,24 @@ function renderResults(data, currency) {
     // Inject Stream Rows if they exist in display_data (We need to check app.py response)
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
-            // --- ADD THIS FILTER ---
-        // If the stream name contains "COGS", don't put it in the Revenue section
-        if (stream.name.includes("COGS")) {
-            return; 
-        }
-        insertRow(isBody, stream.name, stream.values, false);
-    });
-}
-
-
+            if (stream.type === 'revenue') {
+                insertRow(isBody, stream.name, stream.values, false);
+            }
+        });
+    }
+    
     insertRow(isBody, "Total Revenue", d["Revenue"], true);
-    insertRow(isBody, "COGS", d["COGS"]);
+    
+    // 2. Inject COGS Streams (Only type: 'cogs')
+    if (d["Stream_Rows"]) {
+        d["Stream_Rows"].forEach(stream => {
+            if (stream.type === 'cogs') {
+                insertRow(isBody, "   > " + stream.name, stream.values, false); // Indented for clarity
+            }
+        });
+    }
+    
+    insertRow(isBody, "Total COGS", d["COGS"]); // Renamed for clarity
     insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
     insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
     insertRow(isBody, "Depreciation", d["Depreciation"]);
