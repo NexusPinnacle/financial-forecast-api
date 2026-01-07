@@ -174,7 +174,7 @@ function refreshCogsBuilder() {
 
     // 2. Add rows for "Extra" COGS
     if(extraCogs.length > 0) {
-        container.innerHTML += '<h3>Additional Direct Costs</h3>';
+        container.innerHTML += '<h3>Additional Direct Costs (amount)</h3>';
         extraCogs.forEach(cogs => {
             const div = document.createElement('div');
             div.className = 'stream-card cogs-card';
