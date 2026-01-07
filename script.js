@@ -537,7 +537,7 @@ function renderResults(data, currency) {
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
             if (stream.type === 'revenue') {
-                insertRow(isBody, stream.name, stream.values, false);
+            insertRow(isBody, "   + " + stream.name, stream.values, false);
             }
         });
     }
@@ -548,12 +548,13 @@ function renderResults(data, currency) {
     if (d["Stream_Rows"]) {
         d["Stream_Rows"].forEach(stream => {
             if (stream.type === 'cogs') {
-                insertRow(isBody, "   > " + stream.name, stream.values, false); // Indented for clarity
+                // Indent COGS to show they are part of the total
+                insertRow(isBody, "   - " + stream.name, stream.values, false);
             }
         });
     }
     
-    insertRow(isBody, "Total COGS", d["COGS"]); // Renamed for clarity
+    insertRow(isBody, "Total COGS", d["COGS"],true); // Renamed for clarity
     insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
     insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
     insertRow(isBody, "Depreciation", d["Depreciation"]);
