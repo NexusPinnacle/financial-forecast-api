@@ -196,19 +196,26 @@ function refreshCogsBuilder() {
 // Helper to generate the 60 or 120 input boxes
 function generateMatrixInputs(id, type, years, defVal) {
     let html = '';
+    // Get the actual currency from your dropdown (e.g., €)
+    const currency = document.getElementById('currency_symbol').value;
+    
     for(let i=0; i < years * 12; i++) {
-        // Add a data-unit attribute to help collectInputData know if it's % or $
-        const unit = type === 'stream-cogs' ? '%' : '$';
+        // If it's a stream margin, use %. If it's extra cost, use the currency.
+        const unit = type === 'stream-cogs' ? '%' : currency;
+        
         html += `
             <div class="matrix-cell">
                 <label>M${i+1}</label>
-                <input type="number" 
-                       class="cogs-val-input" 
-                       data-parent="${id}" 
-                       data-type="${type}" 
-                       data-unit="${unit}" 
-                       value="${defVal}" 
-                       onchange="updateTotalCogsPreview()">
+                <div style="display:flex; align-items:center;">
+                    <input type="number" 
+                           class="cogs-val-input" 
+                           data-parent="${id}" 
+                           data-type="${type}" 
+                           data-unit="${unit}" 
+                           value="${defVal}" 
+                           onchange="updateTotalCogsPreview()">
+                    <span style="font-size:0.7em; margin-left:2px;">${unit}</span>
+                </div>
             </div>
         `;
     }
@@ -471,7 +478,7 @@ const collectedCogs = [];
         years: years,
         monthly_detail: parseInt(monthlyDetailInput.value),
         
-        cogs_pct_rates: collectList('cogs_pct', true, 'default_cogs_pct'),
+        cogs_pct_rates: new Array(years).fill(0),
         fixed_opex_rates: collectList('fixed_opex', false, 'default_fixed_opex'),
         capex_rates: collectList('capex', false, 'default_capex'),
         dso_days_list: collectList('dso_days', false, 'default_dso_days'),
