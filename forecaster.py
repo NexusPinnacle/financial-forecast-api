@@ -68,6 +68,7 @@ def generate_forecast(
                 
             stream_display_data.append({
                 'name': stream.get('name', 'Stream'),
+                'type': 'revenue',  # ADD THIS
                 'raw_values': [0.0] + formatted_vals # align with L
             })
     else:
@@ -85,9 +86,23 @@ def generate_forecast(
     if cogs_streams and len(cogs_streams) > 0:
         for stream in cogs_streams:
             vals = stream.get('values', [])
+            formatted_cogs = vals[:num_months]
+            if len(formatted_cogs) < num_months:
+                formatted_cogs.extend([0.0] * (num_months - len(formatted_cogs)))
+            
+            # Add to main COGS array for calculations
             # Note: COGS % builder sends $ amounts (calculated in JS)
-            for i in range(min(len(vals), num_months)):
-                cogs[i+1] += vals[i]
+            for i in range(len(formatted_cogs)):
+                cogs[i+1] += formatted_cogs[i]
+
+            # ADD THIS: Track COGS streams for display separately
+            stream_display_data.append({
+                'name': stream.get('name', 'Cost'),
+                'type': 'cogs', # ADD THIS
+                'raw_values': [0.0] + formatted_cogs
+            })
+
+
     else:
         # Fallback: Apply the annual COGS % rates to the revenue vector
         for i in range(1, L):
@@ -188,6 +203,7 @@ def generate_forecast(
         agg = get_display_val(s['raw_values'], True)
         final_stream_rows.append({
             'name': s['name'],
+            'type': s['type'], # ENSURE TYPE IS PASSED TO JS
             'values': agg[1:] # Drop 'Start'
         })
 
