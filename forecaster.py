@@ -135,7 +135,7 @@ opex = [0.0] * L
 
 
     # Other Vectors
-    gp, opex, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(7)]
+    gp, dep, ebit, int_exp, taxes, ni = [[0.0]*L for _ in range(6)]
     ar, inv, ppe, ap, debt, re, cash, assets, liab_eq = [[0.0]*L for _ in range(9)]
     nwc, change_nwc, cff, net_cash = [[0.0]*L for _ in range(4)]
 
@@ -163,7 +163,6 @@ opex = [0.0] * L
         # Revenue is already calculated
         # cogs[i] is already set above, so we just calculate the rest:
         gp[i] = revenue[i] - cogs[i]
-        opex[i] = fixed_opex_monthly[idx]
         dep[i] = ppe[i-1] * m_dep_rate
         ebit[i] = gp[i] - opex[i] - dep[i]
         int_exp[i] = debt[i-1] * m_int_rate
