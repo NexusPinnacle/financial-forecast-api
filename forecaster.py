@@ -11,6 +11,7 @@ def generate_forecast(
 
     cogs_streams=None, # ADD THIS PARAMETER
     **kwargs # Add this to prevent errors if extra data is sent
+    opex_streams=None, **kwargs
 
 ):
     # --- 1. SETUP PERIODS (Always Monthly internally) ---
@@ -109,7 +110,25 @@ def generate_forecast(
             cogs[i] = revenue[i] * cogs_pct_m[i-1]
 
 
-
+opex = [0.0] * L
+    
+    if opex_streams:
+        for stream in opex_streams:
+            vals = stream.get('values', [])
+            formatted = (vals[:num_months] + [0.0]*num_months)[:num_months]
+            for i in range(num_months):
+                opex[i+1] += formatted[i]
+            
+            # Add to display data so it shows up in the IS table
+            stream_display_data.append({
+                'name': stream.get('name'),
+                'type': 'opex',
+                'raw_values': [0.0] + formatted
+            })
+    else:
+        # Fallback to the original fixed_opex_monthly logic
+        for i in range(1, L):
+            opex[i] = fixed_opex_monthly[i-1]
 
 
 
