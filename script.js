@@ -314,21 +314,25 @@ function renderOpexStream(stream) {
 function updateTotalOpexPreview() {
     const years = parseInt(forecastYearsInput.value);
     const container = document.getElementById('annual-opex-list');
+    const currency = document.getElementById('currency_symbol').value; // Get currency
     container.innerHTML = '';
+    
     let annualTotals = new Array(years).fill(0);
 
-    document.querySelectorAll('.opex-val-input').forEach((input, index) => {
+    document.querySelectorAll('.opex-val-input').forEach((input) => {
         const mIdx = Array.from(input.parentNode.parentNode.children).indexOf(input.parentNode);
         const yIdx = Math.floor(mIdx / 12);
         if (yIdx < years) annualTotals[yIdx] += parseFloat(input.value) || 0;
     });
 
     annualTotals.forEach((total, i) => {
-        container.innerHTML += `<div style="min-width:100px;"><strong>Year ${i+1}:</strong><br>$${total.toLocaleString()}</div>`;
+        container.innerHTML += `
+            <div style="min-width:100px;">
+                <strong style="font-size:0.8em;">Year ${i+1}:</strong><br>
+                <span style="font-weight:bold;">${currency}${total.toLocaleString()}</span>
+            </div>`;
     });
 }
-
-// In collectInputData(), add:
 
 
 
@@ -540,6 +544,10 @@ function collectInputData() {
     return {
         revenue_streams: collectedRevenue, 
         cogs_streams: collectedCogs, // Separated properly
+        opex_streams: Array.from(document.querySelectorAll('.opex-card')).map(card => ({
+            name: card.querySelector('h4').textContent,
+            values: Array.from(card.querySelectorAll('.opex-val-input')).map(i => parseFloat(i.value) || 0)
+        })),
         
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
@@ -762,4 +770,11 @@ document.getElementById('addExtraCogsBtn').addEventListener('click', () => {
 window.removeExtraCogs = function(id) {
     extraCogs = extraCogs.filter(c => c.id !== id);
     refreshCogsBuilder();
+};
+
+window.removeOpexStream = function(id) {
+    opexStreams = opexStreams.filter(s => s.id !== id);
+    const element = document.getElementById(`opex-${id}`);
+    if (element) element.remove();
+    updateTotalOpexPreview();
 };
