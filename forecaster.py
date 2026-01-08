@@ -45,6 +45,7 @@ def generate_forecast(
     # REVENUE LOGIC: Streams or Fallback
     revenue = [0.0] * L
     cogs = [0.0] * L
+    opex = [0.0] * L # Initialize Opex vector
     stream_display_data = [] # For breakdown
 
     if revenue_streams and len(revenue_streams) > 0:
