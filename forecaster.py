@@ -10,8 +10,9 @@ def generate_forecast(
     revenue_streams=None, # New Parameter
 
     cogs_streams=None, # ADD THIS PARAMETER
+    opex_streams=None,
     **kwargs # Add this to prevent errors if extra data is sent
-    opex_streams=None, **kwargs
+    
 
 ):
     # --- 1. SETUP PERIODS (Always Monthly internally) ---
