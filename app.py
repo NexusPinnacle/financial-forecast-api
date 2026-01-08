@@ -41,7 +41,7 @@ def get_inputs_from_request(data):
         "opex_streams": data.get('opex_streams', []), # ADD THIS LINE
         
         "cogs_pct_rates": get_list_float('cogs_pct_rates', 0.4), # Default 40% if missing
-        "fixed_opex_rates": data.get('fixed_opex_rates') if not data.get('opex_streams') else None,
+        "fixed_opex_rates": get_list_float('fixed_opex_rates'),
         "capex_rates": get_list_float('capex_rates'),
         "dso_days_list": get_list_float('dso_days_list'),
         "dio_days_list": get_list_float('dio_days_list'),
