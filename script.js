@@ -481,10 +481,7 @@ async function handleForecastRequest(url, isExport = false) {
 }
 
 
- opex_streams: Array.from(document.querySelectorAll('.opex-card')).map(card => ({
-    name: card.querySelector('h4').textContent,
-    values: Array.from(card.querySelectorAll('.opex-val-input')).map(i => parseFloat(i.value) || 0)
-}))
+
 
 
 
@@ -492,14 +489,14 @@ function collectInputData() {
     const years = parseInt(forecastYearsInput.value, 10);
     
     // --- Existing Revenue Stream Collection ---
-    const collectedRevenue = [];
-    // Only select cards that are NOT cogs-cards
-    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card)');
+const collectedRevenue = [];
+    const revCards = document.querySelectorAll('.stream-card:not(.cogs-card):not(.opex-card)');
     revCards.forEach(card => {
         const inputs = card.querySelectorAll('input.stream-val-input');
         const values = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
-        const name = card.querySelector('h4').textContent.split(' (')[0]; // Clean name
-        collectedRevenue.push({ name: name, values: values });
+        // Clean name (remove the type in parenthesis)
+        const name = card.querySelector('h4').textContent.split(' (')[0].trim();
+        collectedRevenue.push({ name: name, values: values, type: 'revenue' });
     });
 
     // --- Existing COGS Stream Collection ---
@@ -527,6 +524,16 @@ function collectInputData() {
         collectedCogs.push({ name: name, values: dollarValues });
     });
 
+    // 3. COLLECT OPEX STREAMS
+    const collectedOpex = [];
+    const opexCards = document.querySelectorAll('.opex-card');
+    opexCards.forEach(card => {
+        const name = card.querySelector('h4').textContent.trim();
+        const inputs = card.querySelectorAll('.opex-val-input');
+        const values = Array.from(inputs).map(i => parseFloat(i.value) || 0);
+        collectedOpex.push({ name: name, values: values, type: 'opex' });
+    });
+
     // --- Standard Inputs Collection ---
     const collectList = (keyPrefix, isPct, defaultId) => {
         const list = [];
@@ -544,10 +551,7 @@ function collectInputData() {
     return {
         revenue_streams: collectedRevenue, 
         cogs_streams: collectedCogs, // Separated properly
-        opex_streams: Array.from(document.querySelectorAll('.opex-card')).map(card => ({
-            name: card.querySelector('h4').textContent,
-            values: Array.from(card.querySelectorAll('.opex-val-input')).map(i => parseFloat(i.value) || 0)
-        })),
+        opex_streams: collectedOpex, // Properly mapped now
         
         tax_rate: parseFloat(document.getElementById('tax_rate').value) / 100,
         initial_ppe: parseFloat(document.getElementById('initial_ppe').value),
