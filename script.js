@@ -266,6 +266,77 @@ function updateTotalCogsPreview() {
 
 
 
+let opexStreams = [];
+
+document.getElementById('addOpexBtn').addEventListener('click', () => {
+    const name = document.getElementById('new_opex_name').value || 'Expense ' + (opexStreams.length + 1);
+    const amount = parseFloat(document.getElementById('new_opex_amount').value) || 0;
+    const growth = parseFloat(document.getElementById('new_opex_growth').value) || 0;
+
+    const id = Date.now();
+    const years = parseInt(forecastYearsInput.value);
+    const streamObj = { id, name, amount, growth, months: years * 12 };
+    
+    opexStreams.push(streamObj);
+    renderOpexStream(streamObj);
+    updateTotalOpexPreview();
+});
+
+function renderOpexStream(stream) {
+    const container = document.getElementById('opex-streams-list');
+    const div = document.createElement('div');
+    div.className = 'stream-card opex-card';
+    div.id = `opex-${stream.id}`;
+
+    let html = `
+        <div class="stream-header">
+            <h4>${stream.name}</h4>
+            <button type="button" class="remove-stream-btn" onclick="removeOpexStream(${stream.id})">Remove</button>
+        </div>
+        <div class="matrix-scroll-wrapper">`;
+
+    let currentMonthly = stream.amount;
+    const growthFactor = 1 + (stream.growth / 100);
+
+    for(let i=0; i < stream.months; i++) {
+        if (i > 0 && i % 12 === 0) currentMonthly *= growthFactor;
+        html += `
+            <div class="matrix-cell">
+                <label>M${i+1}</label>
+                <input type="number" class="opex-val-input" data-id="${stream.id}" value="${currentMonthly.toFixed(2)}" onchange="updateTotalOpexPreview()">
+            </div>`;
+    }
+    html += `</div>`;
+    div.innerHTML = html;
+    container.appendChild(div);
+}
+
+function updateTotalOpexPreview() {
+    const years = parseInt(forecastYearsInput.value);
+    const container = document.getElementById('annual-opex-list');
+    container.innerHTML = '';
+    let annualTotals = new Array(years).fill(0);
+
+    document.querySelectorAll('.opex-val-input').forEach((input, index) => {
+        const mIdx = Array.from(input.parentNode.parentNode.children).indexOf(input.parentNode);
+        const yIdx = Math.floor(mIdx / 12);
+        if (yIdx < years) annualTotals[yIdx] += parseFloat(input.value) || 0;
+    });
+
+    annualTotals.forEach((total, i) => {
+        container.innerHTML += `<div style="min-width:100px;"><strong>Year ${i+1}:</strong><br>$${total.toLocaleString()}</div>`;
+    });
+}
+
+// In collectInputData(), add:
+
+
+
+
+
+
+
+
 
 // --- CORE TABS & UTILS ---
 
@@ -404,6 +475,14 @@ async function handleForecastRequest(url, isExport = false) {
         errorMessage.textContent = `Error: ${error.message}`;
     }
 }
+
+
+ opex_streams: Array.from(document.querySelectorAll('.opex-card')).map(card => ({
+    name: card.querySelector('h4').textContent,
+    values: Array.from(card.querySelectorAll('.opex-val-input')).map(i => parseFloat(i.value) || 0)
+}))
+
+
 
 function collectInputData() {
     const years = parseInt(forecastYearsInput.value, 10);
@@ -556,7 +635,16 @@ function renderResults(data, currency) {
     
     insertRow(isBody, "Total COGS", d["COGS"],true); // Renamed for clarity
     insertRow(isBody, "Gross Profit", d["Gross Profit"], true);
-    insertRow(isBody, "Fixed Opex", d["Fixed Opex"]);
+  
+    // 3. OPEX Section
+    if (d["Stream_Rows"]) {
+    d["Stream_Rows"].forEach(stream => {
+            if (stream.type === 'opex') {
+                insertRow(isBody, "   " + stream.name, stream.values, false);
+            }
+        });
+    }
+insertRow(isBody, "Total Operating Expenses", d["Fixed Opex"], true);
     insertRow(isBody, "Depreciation", d["Depreciation"]);
     insertRow(isBody, "EBIT", d["EBIT"], true);
     insertRow(isBody, "Interest", d["Interest"]);
